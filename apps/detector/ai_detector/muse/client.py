@@ -324,6 +324,8 @@ def _plain_reasons(verdict: Verdict) -> list[ReportReason]:
             gen = c2pa.details.get("claim_generator") or "an unnamed tool"
             src = c2pa.details.get("digital_source_type") or "no source type"
             reasons.append(ReportReason(evidence_id=c2pa.id, text=f"Content Credentials from {gen} ({src})."))
+        elif iptc := c2pa.details.get("iptc_digital_source_type"):
+            reasons.append(ReportReason(evidence_id=c2pa.id, text=f"IPTC metadata in the file says: {iptc}."))
         else:
             reasons.append(ReportReason(evidence_id=c2pa.id, text="No C2PA or IPTC metadata in the file."))
     for e in verdict.evidence:  # a generator's own label decides the verdict: say which one

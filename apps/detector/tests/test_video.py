@@ -164,3 +164,17 @@ def test_visible_mark_decides_video(monkeypatch):
     mark = next(e for e in items if e.id == "vid.watermark")
     assert mark.points_to == "ai" and mark.details["frames_read"] == video_mod.N_FRAMES
     assert fuse(routed, items, request_id="v").verdict == "declared_ai"
+
+
+def test_find_visible_mark_other_generators():
+    assert video_mod.find_visible_mark([["Veo"], ["Veo"], ["Veo"], []]) == ("Google Veo", 3)
+    assert video_mod.find_visible_mark([["Sora @maya"], ["Sora"], ["Sora"]]) == ("OpenAI Sora", 3)
+    assert video_mod.find_visible_mark([["内容由AI生成"], ["AI生成"], ["AI 生成"]]) == ("AI label (AI生成)", 3)
+    assert video_mod.find_visible_mark([["Hailuo AI"], ["Hailuo AI"]]) == ("Hailuo AI", 2)
+    assert video_mod.find_visible_mark([["PixVerse"], ["PixVerse"]]) == ("PixVerse", 2)
+
+
+def test_ordinary_words_do_not_trip_marks():
+    subtitles = [["Yo te veo mañana"], ["sora wa aoi"], ["Sorry"], ["video"], ["Veronica"], ["individual"]]
+    assert video_mod.find_visible_mark(subtitles)[0] is None
+    assert video_mod.find_visible_mark([["Veo"], ["Veo"], []])[0] is None  # a short word needs 3 frames

@@ -22,13 +22,28 @@ from ai_detector.schemas import Calibration, Evidence
 N_FRAMES = 16
 EDGE_SKIP_S = 0.5
 FFMPEG = ffmpeg_exe()
-# Every sampled frame is read (~2.5 s for 16 at 848p, ~6 s at 4K, CPU): on 848p re-encodes the mark reads
-# in only 7-10 of 16 frames. One frame of scene text saying "KlingAI" is not enough.
-MIN_MARK_FRAMES = 2
-# Visible marks that generators burn into output. OCR reads of Kling 3.0/4.0, originals and 848p re-encodes:
-# "KlingAI 3.0", "KingAl3.0", "KlngAI40", "KIingAI", "OKlingAI3.04K" (the logo read as O).
-# shortcut: Kling only (the generator we have samples of); add Hailuo, Vidu, PixVerse... once a sample is checked
-VISIBLE_MARKS = {"Kling AI": re.compile(r"(?<![a-z])o?k[l1i]{0,2}nga[il1](?![a-z])|可灵")}
+# Every sampled frame is read (~2.5 s for 16 at 848p, ~6 s at 4K, CPU): on 848p re-encodes the Kling mark reads
+# in only 7-10 of 16 frames.
+# Visible marks generators burn into output: name -> (pattern on one lowercased OCR box, frames it must be read in).
+# Distinctive brand names need 2 frames, so one frame of scene text is not enough. Names that are also ordinary
+# words ("veo" is Spanish, "sora" Japanese) must be the whole box and read in 3 frames, so a subtitle can't trip them.
+# Runway, Pika and Luma are left out: ordinary words, and no confirmed mark text to anchor on.
+VISIBLE_MARKS: dict[str, tuple[re.Pattern[str], int]] = {
+    # checked on 6 Kling 3.0/4.0 clips: "KlingAI 3.0", "KingAl3.0", "KlngAI40", "KIingAI", "OKlingAI3.04K" (logo as O)
+    "Kling AI": (re.compile(r"(?<![a-z])o?k[l1i]{0,2}nga[il1](?![a-z])|可灵"), 2),
+    # Google: a visible "Veo" in the bottom-right of Veo 3 videos (all but Flow on AI Ultra)
+    "Google Veo": (re.compile(r"\W*ve[o0]\W*"), 3),
+    # OpenAI: Sora 2 downloads carry a visible Sora mark, with the creator's @handle beside it
+    "OpenAI Sora": (re.compile(r"\W*s[o0]ra(\s*@\S+)?\W*"), 3),
+    # shortcut: names from vendor docs and reviews, no sample checked yet; confirm each when a clip turns up
+    "Hailuo AI": (re.compile(r"(?<![a-z])hailuo|海螺\s*ai"), 2),
+    "Jimeng / Dreamina": (re.compile(r"即梦|(?<![a-z])dreamina(?![a-z])"), 2),
+    "PixVerse": (re.compile(r"(?<![a-z])pixverse(?![a-z])"), 2),
+    "Vidu": (re.compile(r"(?<![a-z])vidu\s*(ai)?(?![a-z])"), 2),
+    # China's explicit label (in force 2025-09-01), shown by any compliant generator or platform
+    "AI label (AI生成)": (re.compile(r"ai\s*生成|人工智能生成"), 3),
+}
+FULL_BOX_MARKS = {"Google Veo", "OpenAI Sora"}  # pattern must match the whole OCR box, not a word inside it
 
 
 def frame_times(duration_s: float, n: int = N_FRAMES, edge: float = EDGE_SKIP_S) -> list[float]:
@@ -47,13 +62,16 @@ def _sigmoid(x: float) -> float:
 
 
 def find_visible_mark(texts_per_frame: list[list[str]]) -> tuple[str | None, int]:
-    """(generator, frames it was read in) for the mark seen in >= MIN_MARK_FRAMES frames. Pure; unit-tested."""
-    best: tuple[str | None, int] = (None, 0)
-    for name, pattern in VISIBLE_MARKS.items():
-        hits = sum(any(pattern.search(text.lower()) for text in texts) for texts in texts_per_frame)
-        if hits > best[1]:
-            best = (name, hits)
-    return best if best[1] >= MIN_MARK_FRAMES else (None, best[1])
+    """(generator, frames) for the mark read in the most frames, if enough to count; else (None, best). Pure."""
+    found: tuple[str | None, int] = (None, 0)
+    best = 0
+    for name, (pattern, min_frames) in VISIBLE_MARKS.items():
+        match = pattern.fullmatch if name in FULL_BOX_MARKS else pattern.search
+        hits = sum(any(match(text.strip().lower()) for text in texts) for texts in texts_per_frame)
+        best = max(best, hits)
+        if hits >= min_frames and hits > found[1]:
+            found = (name, hits)
+    return found if found[0] else (None, best)
 
 
 @lru_cache(maxsize=1)

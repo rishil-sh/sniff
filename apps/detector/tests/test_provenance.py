@@ -143,3 +143,15 @@ def test_generator_signature_aigc_label():
     assert generator_signature({"AIGC": kling}) == "AIGC label (kling)"
     assert generator_signature({"AIGC": '{"Label":"3","ContentProducer":"x"}'}) is None  # 3 = only suspected
     assert generator_signature({"AIGC": "not json"}) is None
+
+
+def test_embedded_aigc_found_anywhere_in_the_file():
+    from ai_detector.detectors.provenance import embedded_aigc, generator_signature
+
+    label = b'{"Label":"1","ContentProducer":"hailuo","ProduceID":"x"}'
+    in_mp4 = b"\x00\x00ftypisom" + b"\x00" * 64 + b"data\x00\x00\x00\x01" + label + b"\x00" * 64
+    assert generator_signature({"AIGC": embedded_aigc(in_mp4) or ""}) == "AIGC label (hailuo)"
+    xmp = (b'<rdf:Description TC260:AIGC="{&quot;Label&quot;:&quot;1&quot;,'
+           b'&quot;ContentProducer&quot;:&quot;jimeng&quot;}"/>')
+    assert generator_signature({"AIGC": embedded_aigc(xmp) or ""}) == "AIGC label (jimeng)"
+    assert embedded_aigc(b"ContentProducer with no json around it") is None

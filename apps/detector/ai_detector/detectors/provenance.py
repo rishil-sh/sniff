@@ -133,7 +133,8 @@ def _iptc_source(data: bytes) -> str | None:
     try:
         image = Image.open(io.BytesIO(data))
     except Exception:  # noqa: BLE001 - untrusted file: any parse failure means no metadata
-        return None
+        # not an image (mp4, mov): XMP sits in the container as plain text, so look for the AI tokens directly
+        return next((token for token in AI_SOURCES if token.encode() in data), None)
     blob = ""
     try:
         xmp = image.getxmp()
@@ -162,6 +163,30 @@ GENERATOR_NAMES = (
     "draw things",
     "ideogram",
 )
+
+
+_AIGC_KEY = b"ContentProducer"
+_AIGC_WINDOW = 2000  # bytes either side of the key; the label JSON is a few hundred
+
+
+def embedded_aigc(data: bytes) -> str | None:
+    """The AIGC implicit-label JSON (GB 45438-2025) wherever the file keeps it: mp4 tags, XMP, PNG text. Pure.
+
+    Found by its ContentProducer key, not a container field, because every generator stores it differently.
+    """
+    i = data.find(_AIGC_KEY)
+    while i != -1:
+        start = data.rfind(b"{", max(0, i - _AIGC_WINDOW), i)
+        end = data.find(b"}", i, i + _AIGC_WINDOW)
+        if start != -1 and end != -1:
+            blob = data[start : end + 1].decode("utf-8", "replace").replace("&quot;", '"')  # XMP attributes escape it
+            try:
+                if isinstance(json.loads(blob), dict):
+                    return blob
+            except ValueError:
+                pass
+        i = data.find(_AIGC_KEY, i + 1)
+    return None
 
 
 def generator_signature(fields: dict[str, str]) -> str | None:
@@ -209,6 +234,7 @@ def _generator_fields(data: bytes) -> dict[str, str]:
     fields["xmp"] = xmp
     tool = re.search(r'CreatorTool"?\s*[:=>]\s*"?([^"<]+)', xmp)
     fields["CreatorTool"] = tool.group(1) if tool else ""
+    fields["AIGC"] = fields.get("AIGC") or embedded_aigc(data) or ""
     return fields
 
 
@@ -223,7 +249,9 @@ def _video_fields(data: bytes) -> dict[str, str]:
         ).stdout
     pairs = (line.partition("=") for line in out.splitlines() if not line.startswith(";"))
     # ffmetadata backslash-escapes = ; # \ in values
-    return {k: re.sub(r"\\(.)", r"\1", v) for k, sep, v in pairs if sep}
+    fields = {k: re.sub(r"\\(.)", r"\1", v) for k, sep, v in pairs if sep}
+    fields["AIGC"] = fields.get("AIGC") or embedded_aigc(data) or ""  # some tools keep it in XMP, not a tag
+    return fields
 
 
 def _read_c2pa(data: bytes, mime: str | None) -> tuple[dict | None, str | None]:
