@@ -13,7 +13,7 @@ The classic fingerprint, GAN upsampling spectral peaks ([Frequency Bias, NeurIPS
 The picture splits cleanly: hosted products from established US vendors sign or watermark, while open weights and several fast-moving or Chinese systems are poorly documented. Evidence quality is flagged in the table.
 
 | Generator | Signals reported | Evidence quality |
-|---|---|---|
+| --- | --- | --- |
 | OpenAI (ChatGPT, Codex, API) | C2PA manifest (digitalSourceType `trainedAlgorithmicMedia`) plus SynthID; verify at openai.com/verify | Primary page returned 403; facts via [OpenAI help](https://help.openai.com/en/articles/8912793-c2pa-in-chatgpt-images) summaries and [TNW](https://thenextweb.com/news/openai-c2pa-synthid-ai-image-detection-watermark) (secondary) |
 | Google Gemini / Nano Banana Pro / Imagen | SynthID on outputs; C2PA on Nano Banana Pro in app, Vertex AI, Ads; Imagen `addWatermark` cannot be disabled in the Gemini Developer API | Primary: [Google blog](https://blog.google/technology/ai/ai-image-verification-gemini-app/), [Firebase docs](https://firebase.google.com/docs/reference/js/ai.imagengenerationconfig) |
 | Black Forest Labs FLUX | Signed C2PA on API and Playground only; optional soft-binding watermark; none on self-hosted or third-party inference | Primary: [BFL help](https://help.bfl.ai/articles/3705384267-c2pa-in-flux-generated-images) |

@@ -1,90 +1,156 @@
-# Sniff
+# Sniff 🐕
 
-**Is this AI?** Send Sniff a photo, a voice note, a video or a paragraph of text, on the web or over WhatsApp, and it answers in plain words, with the evidence behind the answer.
+**Forward anything. Sniff checks if it's real.**
 
-- **Evidence first.** Content Credentials (C2PA), invisible watermarks (Stable Diffusion, Meta AudioSeal) and generator metadata decide when present; otherwise calibrated detectors vote, with an honest _inconclusive_ band.
-- **Runs on your machine.** Every detector model runs locally. No API key is needed for a verdict.
-- **Friendly replies.** A [Mastra](https://mastra.ai) agent on Muse (Meta Model API) explains the verdict and answers follow-up questions. Without a key, Sniff uses built-in template replies.
-- **Web and WhatsApp.** The same pipeline answers both, and every check lands in your history.
+Sniff is an open-source suite of AI-content detectors for **text, images, voice and video**. Send it a paragraph, a photo, a voice note or a clip, on the web or over WhatsApp, and it answers in plain words, shows the evidence behind the answer, and says "can't tell" when it honestly can't.
 
 > Verdicts are automated estimates, not proof. Please don't use them as the only evidence against anyone.
 
+## Meet Sherlock
+
+Sniff's mascot is **Sherlock**, a beagle in a detective cap. Beagles are real detection dogs (airports use them), and Sherlock doesn't guess: when he isn't sure, he tilts his head. Every check ends in one of four verdicts:
+
+|  | Verdict | Meaning |
+| --- | --- | --- |
+| 🏷️ | **Declared AI** | The file carries its own AI label: Content Credentials (C2PA), an invisible watermark or generator metadata. |
+| 🐕‍🦺 | **Likely AI** | The detectors agree it was made by AI. |
+| 🤔 | **Inconclusive** | The signals are mixed or weak, so Sniff gives a best guess and says so. |
+| 😌 | **No AI signal found** | Nothing points to AI. This is not a guarantee that a human made it. |
+
+## Why Sniff
+
+- **Evidence first.** Provenance (C2PA, IPTC, generator metadata) and invisible watermarks (Stable Diffusion, Meta AudioSeal) decide when present. Otherwise calibrated detectors vote, with an honest _inconclusive_ band.
+- **Runs on your machine.** Every detector model runs locally. No API key and no cloud upload are needed for a verdict.
+- **Code decides, AI explains.** The detector writes the verdict. An optional language model (Muse, via the Meta Model API) only explains it in friendly words and answers follow-up questions, so it can't change the answer. Without a key, Sniff uses built-in template replies.
+- **Web and WhatsApp.** The same pipeline answers both, and every check is saved to your history.
+
 ## Quick start (Docker)
 
+You need [Docker](https://docs.docker.com/get-docker/) with Compose and about **10 GB of free disk space** for models.
+
 ```bash
-git clone <this repo> sniff && cd sniff
+git clone https://github.com/rishil-sh/ai-detection-suite.git sniff && cd sniff
 docker compose up
 ```
 
-Open **http://localhost:3001** and create an account (it stays on your machine).
+Open **http://localhost:3001** and create an account. Accounts live in your local database; nothing is sent anywhere.
 
-The first start downloads the detector models (~10 GB) into a Docker volume, so it takes a while; later starts take seconds. The images contain no model weights. To fetch models ahead of time, or after changing settings: `docker compose run --rm models`.
+The first start downloads the detector models (~10 GB) into the `models` Docker volume, so it takes a while. Later starts take seconds. The images contain no model weights. To fetch models ahead of time, or again after changing model settings, run `docker compose run --rm models`.
 
-Optional settings go in a `.env` file next to `docker-compose.yml`. Copy [.env.example](.env.example):
+| Service | URL | What |
+| --- | --- | --- |
+| `web` | http://localhost:3001 | Web app: Check (chat) and History |
+| `server` | http://localhost:3000 | API, auth, reply agent, WhatsApp webhook |
+| `detector` | internal `:7860` | Python detector (not exposed to the host) |
+| `models` | runs once | Downloads models, then exits |
 
-| Setting | What it does |
-| --- | --- |
-| `MODEL_API_KEY` | Muse (Meta Model API) key for the friendly replies. Get one at https://dev.meta.ai |
-| `AI_DETECTOR_TEXT_PAIR=1` | Adds the Llama-3.2-3B zero-shot text evidence (~13 GB more; give Docker ≥16 GB of memory) |
-| `WHATSAPP_*` | Connects a WhatsApp number (see below) |
-| `PUBLIC_SERVER_URL`, `PUBLIC_WEB_URL` | Your URLs when not on localhost |
-| `ADMIN_EMAILS` | Emails that may see WhatsApp checks in the web History |
+Data lives in two volumes: `models` (weights) and `data` (SQLite databases and the generated auth secret). `docker compose down -v` deletes both.
+
+## Configuration
+
+Everything is optional. Copy [.env.example](.env.example) to `.env` next to `docker-compose.yml` and fill in only what you need. Each variable is explained inline in that file.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `MODEL_API_KEY` | empty | Muse (Meta Model API) key for friendly replies and follow-up questions. Get one at [dev.meta.ai](https://dev.meta.ai). Without it, verdicts are the same and replies use templates. |
+| `MUSE_MODEL` | `muse-wonder-1.0` | Reply model. `muse-spark-1.3` is faster and cheaper. |
+| `AI_DETECTOR_TEXT_PAIR` | `0` | Set it to `1` to add the Llama-3.2-3B zero-shot text evidence. This needs ~13 GB more disk and Docker memory of at least 16 GB. |
+| `HF_TOKEN` | empty | Hugging Face token, only for gated models such as `meta-llama/Llama-3.1-8B`. |
+| `PUBLIC_SERVER_URL`, `PUBLIC_WEB_URL` | localhost | Your public URLs when Sniff isn't on localhost. Rebuild with `docker compose up --build` after changing them. |
+| `BETTER_AUTH_SECRET` | generated | Session signing secret. One is generated on first boot and kept in the `data` volume. |
+| `ADMIN_EMAILS` | empty | Comma-separated emails that may see WhatsApp checks in the web History. |
+| `WHATSAPP_*` | empty | Connects a WhatsApp number (see [WhatsApp](#whatsapp)). |
+
+For local development, each app has its own `.env.example`:
+
+- [apps/server/.env.example](apps/server/.env.example): API URLs, database paths, the Muse key and WhatsApp.
+- [apps/web/.env.example](apps/web/.env.example): the API URL the browser calls.
+- [apps/detector/.env.example](apps/detector/.env.example): model choices, the model cache path and the Hugging Face token.
 
 ## How it works
 
 ```
 web (Next.js :3001) ──oRPC──┐
-                            ├─► server (Hono :3000) ──► detector (FastAPI :7860) → Verdict + evidence
+                            ├─► server (Hono :3000) ──► detector (FastAPI :7860) → verdict + evidence
 WhatsApp ─► /webhooks/whatsapp┘       ├─ Mastra agent (Muse) → plain-words reply
-                                      └─ SQLite: history, accounts, agent memory
+                                      └─ SQLite: accounts, history, agent memory
 ```
 
 | Input | Evidence |
 | --- | --- |
-| Image | C2PA / IPTC credentials, generator metadata, SD/SDXL watermark, Community Forensics + CLIP detectors |
-| Voice | Meta AudioSeal watermark, w2v-BERT 2.0 probe (decides), DF Arena and XLSR-MamBo (supporting) |
-| Text | Fakespot RoBERTa + Desklib DeBERTa classifiers (decide), Binoculars / Fast-DetectGPT / GLTR on Llama-3.2-3B (supporting) |
-| Video | Not supported yet (provenance only) |
+| **Image** | C2PA / IPTC credentials, generator metadata (AUTOMATIC1111, ComfyUI and others), the SD/SDXL invisible watermark, and the Community Forensics and Cozzolino CLIP detectors |
+| **Voice** | Meta AudioSeal watermark and a w2v-BERT 2.0 probe (these decide), plus DF Arena and XLSR-MamBo (supporting) |
+| **Video** | Provenance, plus 16 frames sampled across the clip and scored by the image detector. The soundtrack goes through the voice checks, and the results are combined. |
+| **Text** | The Fakespot RoBERTa and Desklib DeBERTa classifiers (these decide), plus Binoculars, Fast-DetectGPT and GLTR on a Llama-3.2-3B pair (supporting, optional) |
 
-The detector writes the verdict headline itself. The agent only writes the explanation, so it can't change a verdict. Details, calibration and measured accuracy: [apps/detector/README.md](apps/detector/README.md).
+**Limits:** text must be English and about 110 words or more. Shorter or non-English text gets a "couldn't check this" reply instead of a guess. Voice files are capped at 32 MB. Re-encoded, cropped or screenshotted media lose their watermarks and credentials, and that is when the detectors have to do the work.
 
-## Repository layout
-
-| Path | What it is |
-| --- | --- |
-| [apps/detector](apps/detector) | Python detector (FastAPI, PyTorch), uv project |
-| [apps/server](apps/server) | API: Hono + oRPC + better-auth on Bun, Mastra agent, WhatsApp webhook |
-| [apps/web](apps/web) | Next.js web app: Check (chat) and History |
-| [packages/ui](packages/ui) | Shared shadcn/ui components and theme |
-| [packages/api](packages/api) | oRPC routers and shared types |
-| [packages/db](packages/db) | Drizzle schema and migrations (SQLite / libSQL) |
+Calibration, thresholds and measured accuracy are in [apps/detector/README.md](apps/detector/README.md).
 
 ## Development
 
-You need Node.js 24+, [pnpm](https://pnpm.io), [Bun](https://bun.sh) and [uv](https://docs.astral.sh/uv/).
+You need Node.js 24+, [pnpm](https://pnpm.io), [Bun](https://bun.sh), [uv](https://docs.astral.sh/uv/) and Python 3.11. ffmpeg is bundled with the detector through `imageio-ffmpeg`.
 
 ```bash
-pnpm bootstrap   # env files, dependencies, database
-pnpm models      # optional: download models now instead of on first use
+pnpm bootstrap   # creates the .env files (with an auth secret), installs JS + Python deps, migrates the database
+pnpm models      # optional: download models now (into apps/detector/data/models) instead of on first use
 pnpm dev         # web :3001 · API :3000 · detector :7860
 ```
 
-| Command |  |
+Locally the Llama text pair is **on** by default (~13 GB download and RAM). Set `AI_DETECTOR_TEXT_PAIR=0` in `apps/detector/.env` to skip it.
+
+| Command | What it does |
 | --- | --- |
 | `pnpm check` / `pnpm fix` | Lint and format (Ultracite: oxlint + oxfmt) |
 | `pnpm check-types` | TypeScript across all workspaces |
-| `pnpm test` | Detector (pytest) and server (bun) tests |
-| `pnpm db:generate` / `pnpm db:migrate` | New migration from the schema / apply migrations |
+| `pnpm test` | Detector (pytest) and server (bun) tests. The tests stub the models, so no downloads. |
+| `pnpm db:generate` / `pnpm db:migrate` | Create a migration from the schema / apply migrations |
 | `pnpm db:studio` | Browse the database |
+
+Local files that git ignores: `.data/` (SQLite databases) and `apps/detector/data/` (models and eval sets).
+
+### Repository layout
+
+| Path | What it is |
+| --- | --- |
+| [apps/detector](apps/detector) | Python detector (FastAPI, PyTorch), a uv project. It can also be used on its own. |
+| [apps/server](apps/server) | API: Hono + oRPC + better-auth on Bun, the Mastra reply agent and the WhatsApp webhook |
+| [apps/web](apps/web) | Next.js web app: Check (chat) and History |
+| [packages/api](packages/api) | oRPC routers and shared types |
+| [packages/auth](packages/auth) | better-auth configuration |
+| [packages/db](packages/db) | Drizzle schema and migrations (SQLite / libSQL) |
+| [packages/ui](packages/ui) | Shared shadcn/ui components and theme |
+| [packages/infra](packages/infra) | Optional Cloudflare deployment of the web app (Alchemy) |
 
 ## WhatsApp
 
-1. Create a Meta app with the WhatsApp product. Put its access token, phone number ID and app secret, plus a verify token you choose, in `.env` (Docker) or `apps/server/.env` (local), as `WHATSAPP_*`.
-2. Expose the server over HTTPS (e.g. `cloudflared tunnel --url http://localhost:3000`) and set the webhook URL to `https://<host>/webhooks/whatsapp` with the same verify token. Subscribe to `messages`.
-3. Send the number a photo, a voice note or a paragraph of text.
+1. Create a Meta app at [developers.facebook.com](https://developers.facebook.com) and add the **WhatsApp** product.
+2. Fill in the four `WHATSAPP_*` values in `.env` (Docker) or `apps/server/.env` (local). [.env.example](.env.example) says where to find each one.
+3. Expose the server over HTTPS, for example with `cloudflared tunnel --url http://localhost:3000`. Then set the webhook URL to `https://<host>/webhooks/whatsapp` with the same verify token, and subscribe to `messages`.
+4. Send the number a photo, a voice note, a video or a paragraph of text.
 
-Voice notes arrive as Ogg/Opus. The detector decodes them with the ffmpeg bundled in its image, so the API image does not include ffmpeg.
+WhatsApp users don't have a web login. To see their checks in the web History, add your email to `ADMIN_EMAILS`.
 
-## Deploying the web app to Cloudflare (optional)
+## Deploying
 
-`packages/infra` deploys `apps/web` to Cloudflare Workers with [Alchemy](https://alchemy.run). Run `cd packages/infra && pnpm exec alchemy profile edit`, then `pnpm deploy`. The server and detector run anywhere Docker does.
+- **Docker (recommended):** `docker compose up -d` on any host with ~10 GB of disk. Put it behind HTTPS and set `PUBLIC_SERVER_URL` and `PUBLIC_WEB_URL`.
+- **Web app on Cloudflare (optional):** [packages/infra](packages/infra) deploys `apps/web` to Cloudflare Workers with [Alchemy](https://alchemy.run). Run `cd packages/infra && pnpm exec alchemy profile edit`, then `pnpm deploy`. The server and detector still run wherever Docker does.
+
+## Privacy
+
+- Detection runs entirely on your machine.
+- The content you check is never sent to Muse. The reply agent sees only the verdict and its evidence summary. Chat messages that aren't checks, such as follow-up questions, are sent to Muse when a key is set.
+- With `MODEL_API_KEY` unset, Sniff makes no outside calls except to download models.
+- Checks are stored in your local SQLite database so they show up in History.
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening a PR, run `pnpm check`, `pnpm check-types` and `pnpm test`. CI runs the same checks. New detectors belong in [apps/detector/ai_detector/detectors](apps/detector/ai_detector/detectors) and their weights in [fusion.yaml](apps/detector/ai_detector/fusion.yaml). Please include measured accuracy on a held-out set.
+
+## License
+
+Sniff's code is [MIT](LICENSE) licensed. The detector models it downloads keep their own licenses. Check each model's page on Hugging Face before using it commercially.
+
+## Acknowledgements
+
+Sniff stands on open research and open weights: Community Forensics, Cozzolino et al.'s CLIP-based detector, Meta AudioSeal, w2v-BERT 2.0, DF Arena, XLSR-MamBo, Fakespot, Desklib, Binoculars, Fast-DetectGPT, GLTR and the C2PA project. Replies are powered by Muse through the Meta Model API. Sniff was built for the Meta Global AI Developer Hackathon.

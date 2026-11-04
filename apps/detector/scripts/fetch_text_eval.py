@@ -34,7 +34,7 @@ ELLIPSE_URL = "https://raw.githubusercontent.com/scrosseye/ELLIPSE-Corpus/main/E
 LIANG_GROUPS = {"Real TOEFL": "liang-toefl", "Real College Essays": "liang-college", "Real CS224N": "liang-cs224n"}
 
 # Attack tables are independent of router._LOOKALIKES on purpose: the eval should catch what the defence misses.
-HOMOGLYPHS = dict(zip("aeopcyxiAEOPCHKMTXB", "аеорсухіАЕОРСНКМТХВ"))
+HOMOGLYPHS = dict(zip("aeopcyxiAEOPCHKMTXB", "аеорсухіАЕОРСНКМТХВ", strict=True))
 
 
 def homoglyph(text: str, rng: random.Random, rate: float = 0.5) -> str:
@@ -92,8 +92,11 @@ def main() -> None:
         ellipse = [(r["text_id_kaggle"], r["full_text"]) for r in csv.DictReader(fh)]
     picked[("real", "ellipse")] = rng.sample(ellipse, args.ellipse)
 
-    liang = json.loads(Path(hf_hub_download("WxWx/ChatGPT-Detector-Bias", "all_data.json", repo_type="dataset",
-                                            cache_dir=HF_CACHE)).read_text())
+    liang = json.loads(
+        Path(
+            hf_hub_download("WxWx/ChatGPT-Detector-Bias", "all_data.json", repo_type="dataset", cache_dir=HF_CACHE)
+        ).read_text()
+    )
     for i, r in enumerate(liang):
         if r["name"] in LIANG_GROUPS:
             picked.setdefault(("real", LIANG_GROUPS[r["name"]]), []).append((f"{i:04d}", r["text"]))

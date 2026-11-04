@@ -1,4 +1,4 @@
-# AI content detector
+# Sniff detector
 
 Open-source, evidence-first verdicts for AI-generated **images, video, speech, and text**. Fusion returns **likely AI**, **inconclusive**, **no AI signal found**, or **declared AI** when provenance or a watermark says so. Muse Wonder explains the verdict in plain words; our code decides it.
 
@@ -22,12 +22,8 @@ Built for the Meta Global AI Developer Hackathon (Indie track, "Build for Your W
 
 The detector runs without any keys.
 
-- **Meta Model API**, [dev.meta.ai](https://dev.meta.ai): only for Muse explanations and transcription when called with
-  `send_to_muse: true`. Put the key in `.env` as `MODEL_API_KEY`. (In Sniff, the server's Mastra agent writes replies
-  instead.)
-- **Hugging Face**, [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens): only for gated models,
-  e.g. the original [meta-llama/Llama-3.1-8B](https://huggingface.co/meta-llama/Llama-3.1-8B) pair. Put it in `.env`
-  as `HF_TOKEN`. The default models are all ungated.
+- **Meta Model API**, [dev.meta.ai](https://dev.meta.ai): only for Muse explanations and transcription when called with `send_to_muse: true`. Put the key in `.env` as `MODEL_API_KEY`. (In Sniff, the server's Mastra agent writes replies instead.)
+- **Hugging Face**, [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens): only for gated models, e.g. the original [meta-llama/Llama-3.1-8B](https://huggingface.co/meta-llama/Llama-3.1-8B) pair. Put it in `.env` as `HF_TOKEN`. The default models are all ungated.
 - **Modal**, [modal.com](https://modal.com): only for `modal_app.py` deployments (`uv run modal setup`).
 
 Copy `.env.example` to `.env` and fill the values. Do not commit `.env`.
@@ -112,8 +108,7 @@ curl -s http://127.0.0.1:7860/v1/analyze/text \
 
 ## 3. Deploy
 
-Docker: `docker compose up` from the monorepo root runs this detector with the rest of Sniff (models download into a
-volume, not the image). Modal (CPU-only API, no ML models yet): `uv run modal deploy modal_app.py`.
+Docker: `docker compose up` from the monorepo root runs this detector with the rest of Sniff (models download into a volume, not the image). Modal (CPU-only API, no ML models yet): `uv run modal deploy modal_app.py`.
 
 Set `AI_DETECTOR_SKIP_ML=1` to skip the learned image models (tests do this via mocks).
 

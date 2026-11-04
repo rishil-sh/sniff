@@ -77,7 +77,13 @@ def load_classifiers():
         if _classifiers is not None:
             return _classifiers
         import torch.nn as nn
-        from transformers import AutoConfig, AutoModel, AutoModelForSequenceClassification, AutoTokenizer, PreTrainedModel
+        from transformers import (
+            AutoConfig,
+            AutoModel,
+            AutoModelForSequenceClassification,
+            AutoTokenizer,
+            PreTrainedModel,
+        )
         from transformers.modeling_outputs import SequenceClassifierOutput
 
         class Desklib(PreTrainedModel):  # architecture from the model card: mean-pooled DeBERTa + linear head
@@ -137,9 +143,16 @@ def score_classifiers(text: str) -> dict[str, list[float]]:
     out = {}
     for eid, (tokenizer, model) in models.items():
         max_len = CLASSIFIERS[eid][2]
-        enc = tokenizer(clean_text(text) if eid == "txt.fakespot" else text, truncation=True, max_length=max_len,
-                        stride=max_len // 2, return_overflowing_tokens=True, padding=True, return_tensors="pt",
-                        return_token_type_ids=False)
+        enc = tokenizer(
+            clean_text(text) if eid == "txt.fakespot" else text,
+            truncation=True,
+            max_length=max_len,
+            stride=max_len // 2,
+            return_overflowing_tokens=True,
+            padding=True,
+            return_tensors="pt",
+            return_token_type_ids=False,
+        )
         enc.pop("overflow_to_sample_mapping", None)
         logits: list[float] = []
         with torch.inference_mode():
@@ -201,14 +214,14 @@ def score_text(text: str) -> dict:
             stats.append(token_stats(observer(ids).logits[0, :-1], performer(ids).logits[0, :-1], y))
             ys.append(y)
     y = torch.cat(ys)
-    binoculars, fast_detect, ranks = combine_stats(*(torch.cat(parts) for parts in zip(*stats)))
+    binoculars, fast_detect, ranks = combine_stats(*(torch.cat(parts) for parts in zip(*stats, strict=True)))
     return {
         "tokens": int(y.numel()),
         "windows": len(starts),
         "truncated": len(body) > y.numel(),
         "binoculars": binoculars,
         "fast_detect": fast_detect,
-        "gltr": [[tokenizer.decode([t]), gltr_bucket(r)] for t, r in zip(y.tolist(), ranks)],
+        "gltr": [[tokenizer.decode([t]), gltr_bucket(r)] for t, r in zip(y.tolist(), ranks, strict=True)],
     }
 
 
@@ -231,8 +244,18 @@ def _tamper_evidence(changes: dict[str, int]) -> list[Evidence]:
     """Hidden or lookalike characters in prose are a known detector-evasion trick. Shown, never votes."""
     if not (changes.get("hidden") or changes.get("lookalike")):
         return []
-    return [Evidence(id="txt.tamper", detector="unicode-normalizer", version="router.normalize_text", modality="text",
-                     signal="rule", status="ok", points_to="none", details=changes)]
+    return [
+        Evidence(
+            id="txt.tamper",
+            detector="unicode-normalizer",
+            version="router.normalize_text",
+            modality="text",
+            signal="rule",
+            status="ok",
+            points_to="none",
+            details=changes,
+        )
+    ]
 
 
 def _classifier_evidence(text: str) -> list[Evidence]:
@@ -252,8 +275,17 @@ def _classifier_evidence(text: str) -> list[Evidence]:
         logit = sum(windows) / len(windows)  # mean window logit = the document score
         p = _sigmoid(logit)
         details = {"max_tokens": max_tokens, "windows": len(windows), "window_logits": [round(w, 3) for w in windows]}
-        items.append(Evidence(status="ok", raw_score=logit, p_ai=p, points_to="ai" if p >= 0.5 else "real",
-                              details=details, calibration=Calibration(set="uncalibrated-sigmoid"), **common))
+        items.append(
+            Evidence(
+                status="ok",
+                raw_score=logit,
+                p_ai=p,
+                points_to="ai" if p >= 0.5 else "real",
+                details=details,
+                calibration=Calibration(set="uncalibrated-sigmoid"),
+                **common,
+            )
+        )
     return items
 
 
@@ -271,8 +303,16 @@ def _zero_shot_evidence(text: str) -> list[Evidence]:
     except Exception as exc:  # noqa: BLE001 — e.g. gated weights without HF_TOKEN
         ms = int((time.perf_counter() - started) * 1000)
         return [
-            Evidence(id=i, detector=d, version=version, status="error", weight=w,
-                     details={"error": str(exc)}, latency_ms=ms, **common)
+            Evidence(
+                id=i,
+                detector=d,
+                version=version,
+                status="error",
+                weight=w,
+                details={"error": str(exc)},
+                latency_ms=ms,
+                **common,
+            )
             for i, d, w in ids
         ]
     ms = int((time.perf_counter() - started) * 1000)
@@ -289,11 +329,18 @@ def _zero_shot_evidence(text: str) -> list[Evidence]:
     ]
     return [
         Evidence(
-            id=i, detector=d, version=version, status="ok", raw_score=raw, p_ai=p,
+            id=i,
+            detector=d,
+            version=version,
+            status="ok",
+            raw_score=raw,
+            p_ai=p,
             points_to="none" if p is None else ("ai" if p >= 0.5 else "real"),
-            weight=w, details=det,
+            weight=w,
+            details=det,
             calibration=None if p is None else Calibration(set="uncalibrated-sigmoid"),
-            latency_ms=ms, **common,
+            latency_ms=ms,
+            **common,
         )
         for (i, d, w), raw, p, det in scored
     ]

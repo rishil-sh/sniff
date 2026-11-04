@@ -105,9 +105,23 @@ def test_ogg_opus_voice_note_routes_and_decodes():
     from ai_detector.router import ffmpeg_exe
 
     ogg = subprocess.run(
-        [ffmpeg_exe(), "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=2", "-c:a", "libopus",
-         "-f", "ogg", "pipe:1"],
-        capture_output=True, check=True, timeout=60,
+        [
+            ffmpeg_exe(),
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-c:a",
+            "libopus",
+            "-f",
+            "ogg",
+            "pipe:1",
+        ],
+        capture_output=True,
+        check=True,
+        timeout=60,
     ).stdout
     assert sniff(ogg, None) == ("audio", "audio/ogg")
     assert sniff(b"", "note.opus") == ("audio", "audio/ogg")

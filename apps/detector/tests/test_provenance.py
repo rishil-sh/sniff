@@ -22,8 +22,7 @@ def test_valid_ai_action():
                                 {
                                     "action": "c2pa.created",
                                     "digitalSourceType": (
-                                        "http://cv.iptc.org/newscodes/digitalsourcetype/"
-                                        "trainedAlgorithmicMedia"
+                                        "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"
                                     ),
                                 }
                             ]
@@ -54,8 +53,7 @@ def test_valid_capture():
                                 {
                                     "action": "c2pa.created",
                                     "digitalSourceType": (
-                                        "http://cv.iptc.org/newscodes/digitalsourcetype/"
-                                        "digitalCapture"
+                                        "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture"
                                     ),
                                 }
                             ]
@@ -83,8 +81,7 @@ def test_invalid_signature_ai_claim_still_points_to_ai():
                                 {
                                     "action": "c2pa.created",
                                     "digitalSourceType": (
-                                        "http://cv.iptc.org/newscodes/digitalsourcetype/"
-                                        "trainedAlgorithmicMedia"
+                                        "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"
                                     ),
                                 },
                                 {"action": "c2pa.converted", "digitalSourceType": None},
@@ -114,8 +111,7 @@ def test_invalid_signature_capture_is_not_trusted():
                                 {
                                     "action": "c2pa.created",
                                     "digitalSourceType": (
-                                        "http://cv.iptc.org/newscodes/digitalsourcetype/"
-                                        "digitalCapture"
+                                        "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture"
                                     ),
                                 }
                             ]

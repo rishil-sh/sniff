@@ -4,27 +4,26 @@ Status: plan, not implemented. Date: 2026-11-02.
 
 ## 1. Where we are
 
-Image evidence today: C2PA, generator metadata, invisible watermark, and three learned detectors
-(`img.commfor`, `img.clip`, `img.spai`) fused by hand-set weights in `ai_detector/fusion.yaml`.
+Image evidence today: C2PA, generator metadata, invisible watermark, and three learned detectors (`img.commfor`, `img.clip`, `img.spai`) fused by hand-set weights in `ai_detector/fusion.yaml`.
 
 Findings from the lens icon test (AI clay render, no metadata):
 
-| Image | commfor | clip | spai | Fused | Verdict |
-|---|---|---|---|---|---|
-| Original art | 0.02 | 0.83 | 0.81 | 0.50 | inconclusive |
-| Icon (ring + border, 512px) | 0.035 | 0.80 | 0.00 | 0.23 | inconclusive |
+| Image                       | commfor | clip | spai | Fused | Verdict      |
+| --------------------------- | ------- | ---- | ---- | ----- | ------------ |
+| Original art                | 0.02    | 0.83 | 0.81 | 0.50  | inconclusive |
+| Icon (ring + border, 512px) | 0.035   | 0.80 | 0.00 | 0.23  | inconclusive |
 
 - SPAI was crashing on every image (missing `clip` stub, checkpoint load rejected). Fixed in `spai_runner.py`.
 - Commfor is confidently wrong on stylized art. Disagreement above `max_disagreement` (0.6) returns inconclusive.
 - SPAI (spectral) loses its signal after resize or compositing.
 - All learned scores are raw sigmoids (`platt: {}`), so they are not comparable across detectors.
 
-Core limitation for the stated priority: all three detectors are trained for whole-image generation.
-Face swaps, face morphs and local AI edits are mostly real pixels, so they score as real.
+Core limitation for the stated priority: all three detectors are trained for whole-image generation. Face swaps, face morphs and local AI edits are mostly real pixels, so they score as real.
 
 ## 2. Priority: deepfakes and AI-morphed images
 
 Definitions used here:
+
 - **Deepfake:** face swap, face reenactment, or synthetic face in a real scene.
 - **Morph:** two identities blended into one face (ID fraud), or a face altered by AI.
 - **AI edit:** inpainting or generative fill on part of a real photo.
@@ -34,7 +33,7 @@ Definitions used here:
 Buckets, a few hundred images each to start:
 
 | Bucket | Sources |
-|---|---|
+| --- | --- |
 | Face swaps | FaceForensics++, Celeb-DF, DF40 |
 | Face morphs | FRLL-Morphs and other public morph sets |
 | AI edits | Self-made: Stable Diffusion inpainting on real photos |
@@ -42,6 +41,7 @@ Buckets, a few hundred images each to start:
 | Real | Matched real photos for every bucket, including stylized and JPEG-compressed |
 
 Rules:
+
 - Test cross-dataset: fit on one set, test on another. Forgery detectors collapse on unseen generators.
 - Hold out a test split that is never used for fitting or tuning.
 - Several datasets need a signed agreement; check access and license before relying on them.

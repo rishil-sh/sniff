@@ -30,14 +30,23 @@ def test_pair_scores_machine_like_vs_surprising():
 
 def test_gltr_bucket():
     assert [text_mod.gltr_bucket(r) for r in (0, 9, 10, 99, 999, 1000)] == [
-        "top-10", "top-10", "top-100", "top-100", "top-1000", "rest",
+        "top-10",
+        "top-10",
+        "top-100",
+        "top-100",
+        "top-1000",
+        "rest",
     ]
 
 
 # Zero-shot fakes use the class medians measured on RAID abstracts with the Llama-3.2-3B pair.
 def _fake_scores(binoculars, fast_detect):
     return lambda _text: {
-        "tokens": 160, "windows": 1, "truncated": False, "binoculars": binoculars, "fast_detect": fast_detect,
+        "tokens": 160,
+        "windows": 1,
+        "truncated": False,
+        "binoculars": binoculars,
+        "fast_detect": fast_detect,
         "gltr": [[" the", "top-10"]] * 150 + [[" river", "rest"]] * 10,
     }
 

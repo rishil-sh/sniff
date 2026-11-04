@@ -69,12 +69,11 @@ def fuse(
                 set=str(fit.get("set")), auroc=fit.get("auroc"), tpr_at_1pct_fpr=fit.get("tpr_at_1pct_fpr")
             )
 
-    declared = [e for e in evidence if e.status == "ok" and e.signal in ("provenance", "watermark") and e.points_to == "ai"]
-    capture = [
-        e
-        for e in evidence
-        if e.status == "ok" and e.signal == "provenance" and e.points_to == "real"
+    declared = [
+        e for e in evidence if e.status == "ok" and e.signal in ("provenance", "watermark") and e.points_to == "ai"
     ]
+    capture = [e for e in evidence if e.status == "ok" and e.signal == "provenance" and e.points_to == "real"]
+
     def weight_of(e: Evidence) -> float:
         w = weights.get(e.id)
         return (e.weight if e.weight > 0 else 1.0) if w is None else w
@@ -82,9 +81,7 @@ def fuse(
     scored = [e for e in evidence if e.status == "ok" and e.p_ai is not None]
     # weight 0 in fusion.yaml = shown as evidence, never votes or vetoes
     voters = [
-        e
-        for e in scored
-        if weight_of(e) > 0 and not (e.signal == "learned" and abs(float(e.p_ai) - 0.5) < chance_band)
+        e for e in scored if weight_of(e) > 0 and not (e.signal == "learned" and abs(float(e.p_ai) - 0.5) < chance_band)
     ]
     scores = [float(e.p_ai) for e in voters if e.p_ai is not None]
 

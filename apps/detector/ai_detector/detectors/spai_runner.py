@@ -16,16 +16,19 @@ from PIL import Image
 # spai.models imports OpenAI `clip` at module level; only its unused CLIP backbone needs it.
 sys.modules.setdefault("clip", types.ModuleType("clip"))
 
-from spai.config import get_config
-from spai.data.data_finetune import build_transform
-from spai.models import build_cls_model
+from spai.config import get_config  # noqa: E402 - needs the clip stub above
+from spai.data.data_finetune import build_transform  # noqa: E402 - needs the clip stub above
+from spai.models import build_cls_model  # noqa: E402 - needs the clip stub above
 
 
 class _Unpickler(pickle.Unpickler):
     # torch 2.3 has no add_safe_globals; the checkpoint embeds a yacs config, so allow only tensors + that class.
     def find_class(self, module, name):
         if module.startswith("torch.") or (module, name) in {
-            ("collections", "OrderedDict"), ("yacs.config", "CfgNode"), ("builtins", "set"), ("__builtin__", "set")
+            ("collections", "OrderedDict"),
+            ("yacs.config", "CfgNode"),
+            ("builtins", "set"),
+            ("__builtin__", "set"),
         }:
             return super().find_class(module, name)
         raise pickle.UnpicklingError(f"blocked {module}.{name}")

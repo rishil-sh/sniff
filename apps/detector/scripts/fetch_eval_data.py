@@ -91,7 +91,7 @@ def main() -> None:
     for (label, gen), picked in plan.items():
         dest = args.out / label / (gen or "")
         dest.mkdir(parents=True, exist_ok=True)
-        for i, f in enumerate(picked):
+        for f in picked:
             cached = hf_hub_download(REPO, f, repo_type="dataset")
             # subset folders reuse names (0001.png), so prefix with the subset to stay unique
             subset = Path(f).parent.name.split()[0].lower()
@@ -107,8 +107,11 @@ def main() -> None:
     if args.screenshots:
         for label in ("ai", "real"):
             originals = [
-                p for p in sorted((args.out / label).rglob("*"))
-                if p.is_file() and "screenshot" not in p.parts and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+                p
+                for p in sorted((args.out / label).rglob("*"))
+                if p.is_file()
+                and "screenshot" not in p.parts
+                and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
             ]
             for p in originals:
                 # name keeps the original's folder + stem so splits can keep a pair together

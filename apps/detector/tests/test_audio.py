@@ -12,8 +12,16 @@ SR = audio_mod.SR
 
 def _routed() -> RoutedInput:
     return RoutedInput(
-        modality="audio", out_of_domain=False, reason=None, filename="clip.wav", mime="audio/wav",
-        size_bytes=4, duration_s=10.0, token_count=None, sha256="x", data=b"RIFF",
+        modality="audio",
+        out_of_domain=False,
+        reason=None,
+        filename="clip.wav",
+        mime="audio/wav",
+        size_bytes=4,
+        duration_s=10.0,
+        token_count=None,
+        sha256="x",
+        data=b"RIFF",
     )
 
 
@@ -130,10 +138,18 @@ def test_probe_score_uses_saved_layer_and_scaling(monkeypatch):
     feats[0, 7] = [3, 1, 1, 1]
     feats[1, 7] = [-1, 1, 1, 1]
     monkeypatch.setattr(audio_mod, "embed_w2vbert", lambda chunks: feats)
-    monkeypatch.setitem(audio_mod._models, "probe", {
-        "layer": np.int64(7), "mean": np.array([1, 1, 1, 1], np.float32), "scale": np.array([2, 1, 1, 1], np.float32),
-        "coef": np.array([1, 0, 0, 0], np.float32), "intercept": np.float32(0.5), "tag": np.array("t"),
-    })
+    monkeypatch.setitem(
+        audio_mod._models,
+        "probe",
+        {
+            "layer": np.int64(7),
+            "mean": np.array([1, 1, 1, 1], np.float32),
+            "scale": np.array([2, 1, 1, 1], np.float32),
+            "coef": np.array([1, 0, 0, 0], np.float32),
+            "intercept": np.float32(0.5),
+            "tag": np.array("t"),
+        },
+    )
     assert audio_mod.score_w2vbert([None, None]) == [1.5, -0.5]
 
 
@@ -188,7 +204,9 @@ def test_audio_report_explains_unscored_clip(monkeypatch):
     _patch(monkeypatch, _speechlike(10), 3.0, 3.0, _silent)  # no probe weights
     verdict = fuse(_routed(), asyncio.run(audio_mod.collect(_routed())), request_id="t")
     report = explain_verdict(verdict, send_to_muse=False)
-    assert verdict.verdict == "inconclusive" and report.summary.startswith("Inconclusive. The speech detector could not")
+    assert verdict.verdict == "inconclusive" and report.summary.startswith(
+        "Inconclusive. The speech detector could not"
+    )
 
 
 def test_audio_stacker_is_pinned_to_the_shipped_probe():

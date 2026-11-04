@@ -5,9 +5,11 @@ Method note: GitHub stars, licenses and push dates come from the GitHub API (gh)
 ## 1. Open-source detector repos and pretrained models (2024-2026)
 
 ### Takeaway
+
 Permissive, usable-today options are SPAI (Apache-2.0, weights released), GRIP-UNINA's CLIP-based detector (Apache-2.0), UniversalFakeDetect (MIT) and AIDE (MIT code). The strongest recent academic detectors have non-commercial or unclear terms (B-Free, AIGIBench checkpoints, Community Forensics eval data). No source I found shows any open detector being validated on GPT-image, Gemini/Nano Banana or Qwen-Image outputs.
 
 ### Cited Findings
+
 - SPAI (CVPR 2025), spectral masked-learning, flags AI images as out-of-distribution from real-image spectral statistics, handles any resolution. Apache-2.0, README says code and weights are Apache-2. Checkpoint is on Google Drive. Inference needs under 8 GB GPU. Stars 91, last push 2025-08-01. README reports no numbers. — [GitHub](https://github.com/mever-team/spai)
 - GRIP-UNINA ClipBased-SyntheticImageDetection ("Raising the Bar of AI-generated Image Detection with CLIP"). Apache-2.0, 92 stars, last push 2024-11-24. Weights fetched through git lfs; the weights' own license was not stated in the sources. — [GitHub](https://github.com/grip-unina/ClipBased-SyntheticImageDetection)
 - GRIP-UNINA DMimageDetection (latent diffusion detector). Apache-2.0, 241 stars, last push 2024-05-30. SPAI reuses its training/validation data. — [GitHub](https://github.com/grip-unina/DMimageDetection)
@@ -26,11 +28,13 @@ Permissive, usable-today options are SPAI (Apache-2.0, weights released), GRIP-U
 - 2026 AI-GenBench fine-tuned DINOv3 checkpoint exists (license "other", 0 stars). — [GitHub](https://github.com/SerafinoPandolfini/AI-GenBench-DINOv3-Checkpoint)
 
 ### Inferences
+
 - For a permissive production stack, SPAI + GRIP-UNINA CLIP detector (both Apache-2.0) are the cleanest, but both were trained on older generators (latent-diffusion era). Re-validate on FLUX and later.
 - HF community classifiers are trained on small datasets, and generalization is unknown. Do not trust them for new generators without testing.
 - "No license declared" on GitHub means all rights reserved by default. Treat as non-usable commercially until clarified.
 
 ### Gaps
+
 - Reported cross-benchmark numbers for SPAI, GRIP CLIP and Community Forensics were not retrieved (READMEs lack them; papers not read).
 - No open detector's accuracy on GPT-image, Nano Banana, Qwen-Image or Midjourney v7 found.
 - Weights license for GRIP CLIP detector and AIDE not verified.
@@ -38,9 +42,11 @@ Permissive, usable-today options are SPAI (Apache-2.0, weights released), GRIP-U
 ## 2. Datasets and benchmarks
 
 ### Takeaway
+
 Newest-generator coverage is best in OpenFake (FLUX.1/FLUX.2, Imagen 4, HiDream; CC-BY-NC) and AIGIBench (FLUX1-dev, Midjourney-V6; CC-BY-NC-SA). Community Forensics is the largest and most diverse (4,803 generators). No dataset surveyed was confirmed to include GPT-image, Gemini/Nano Banana or Qwen-Image. Most carry non-commercial or research-only terms.
 
 ### Cited Findings
+
 - OpenFake (arXiv 2509.09495): about 4M images, roughly 3M real with captions and nearly 1M synthetic. HF `ComplexDataLab/OpenFake`: core subset 2.45M rows (train 2.3M / val 58.5K / test 91.4K), plus a 36.1K reddit subset. Generators visible in rows: FLUX.1-dev/schnell, FLUX.2-dev, FLUX-1.1-pro, Imagen 4.0, SD1.5/2.1/3.5, SDXL finetunes, Pony, HiDream-I1, Mystic. Midjourney, GPT-image, Gemini and Qwen as generators not seen in the part of the card read. Real images from LAION and Pexels. **License cc-by-nc-4.0.** Updated 2026-09-29. Includes a crowdsourced adversarial platform to keep adding hard examples. — [HF](https://huggingface.co/datasets/ComplexDataLab/OpenFake); [arXiv](https://arxiv.org/abs/2509.09495)
 - Community Forensics (CVPR 2025): about 2.76M images, about 1.08 TB, from 4,803 generators. Subsets: systematic 1.92M (HF latent diffusion models), manual 774K, commercial 14.9K. Real: LAION 40.3%, ImageNet 40.3%, CelebA 7.2%, COCO 4.4%, etc. Main set cc-by-4.0 "for research only"; generated images inherit source-model licenses (mostly CreativeML OpenRAIL-M). HF shows Eval and Small variants as cc-by-nc-sa-4.0. Specific commercial models not named on the card. — [HF](https://huggingface.co/datasets/OwensLab/CommunityForensics); [paper](https://arxiv.org/pdf/2411.04125)
 - AIGIBench (NeurIPS 2025): 25 test subsets, 23 sources, includes FLUX1-dev, Midjourney-V6, SD-XL, SD3, DALL-E 3, Imagen-3; also CommunityAI (6,000) and SocialRF (3,000) crawled from the wild, face-swap sets. Training: 144K images per setting. HF data cc-by-nc-sa-4.0. — [GitHub](https://github.com/HorizonTEL/AIGIBench); [summary](https://en.papernotes.org/NeurIPS2025/image_generation/is_artificial_intelligence_generated_image_detection_a_solved_problem/)
@@ -57,10 +63,12 @@ Newest-generator coverage is best in OpenFake (FLUX.1/FLUX.2, Imagen 4, HiDream;
 - FakeClue (explainable detection data): Apache-2.0 on HF mirrors. — [HF](https://huggingface.co/datasets/lingcco/FakeClue)
 
 ### Inferences
+
 - If you need GPT-image / Nano Banana / Qwen-Image / Midjourney v7 test data, you will likely have to generate it yourself or use OpenFake updates; none of the surveyed sets confirms these.
 - Almost all datasets are non-commercial or research-only; use them for evaluation and be careful training a commercial model on them.
 
 ### Gaps
+
 - FakeBench: no repo or dataset size found (HF hits were unrelated music sets).
 - Exact generator lists for AI-GenBench, ImagiNet commercial subset and Community Forensics commercial subset not retrieved.
 - Semi-Truths and Synthbuster sizes not retrieved.
@@ -69,9 +77,11 @@ Newest-generator coverage is best in OpenFake (FLUX.1/FLUX.2, Imagen 4, HiDream;
 ## 3. Commercial and API detectors and independent evaluations
 
 ### Takeaway
+
 Vendor claims run 98-99%, independent tests land lower (roughly 75-90%) and degrade on newer generators, compression and perturbation. Hive has the best peer-reviewed record; Illuminarty is weaker; rigorous independent papers for AI or Not and Reality Defender were not found.
 
 ### Cited Findings
+
 - "Organic or Diffused" (arXiv 2402.03214): Hive ranked first of five detectors, about 98% accuracy, 0% FPR on human art, 3.17% FNR; Illuminarty worse and rejected images over 3MB. — [arXiv](https://arxiv.org/pdf/2402.03214)
 - ImageDetectBench (arXiv 2411.13553): on 200 images Hive accuracy 1.0 unperturbed, 0.88 with Gaussian noise; Illuminarty 0.8 and 0.57. Watermark-based detection was far less sensitive to distribution shift than passive detectors. Small sample. — [arXiv](https://arxiv.org/pdf/2411.13553)
 - NewsGuard audit, May 2026 (45 images, via secondary table): Sightengine 0% real photos wrongly flagged, 33% of substantially altered images caught; Hive 0% and 73.33%. Another summary says detectors often called real content fake, which contradicts this. I did not open NewsGuard's own report. — [secondary roundup](https://checkthat.ai/answers/what-are-the-best-ai-image-detector-tools); [other summary](https://www.tecnoandroid.it/news/deepfake-e-ai-i-software-per-riconoscerli-continuano-a-sbagliare-1895219/)
@@ -81,9 +91,11 @@ Vendor claims run 98-99%, independent tests land lower (roughly 75-90%) and degr
 - CBC three-image test: AI or Not and Hive correct on all three, Illuminarty wrong on all. Anecdotal. — [CBC](https://amp.cbc.ca/news/canada/ai-detector-tools-test-1.7482913)
 
 ### Inferences
+
 - Treat vendor accuracy as upper bounds. Plan on an ensemble plus a human or provenance fallback.
 
 ### Gaps
+
 - No peer-reviewed independent evaluation of AI or Not or Reality Defender. Reality Defender numbers (about 90%) are from vendor-linked pages and are not cited here.
 - No pricing or API terms gathered.
 - Per-generator accuracy on GPT-image, Nano Banana, Midjourney v7 not found for any vendor.
@@ -91,9 +103,11 @@ Vendor claims run 98-99%, independent tests land lower (roughly 75-90%) and degr
 ## 4. Provenance, C2PA and watermark verification tools
 
 ### Takeaway
+
 C2PA verification is well served by Adobe/CAI open-source tooling (Apache-2.0 or MIT). Invisible-watermark detection is vendor-gated: SynthID image detection runs only inside Google products, so you cannot verify it yourself. Open watermark systems (Video Seal, TrustMark) only detect watermarks you embedded yourself.
 
 ### Cited Findings
+
 - c2pa-rs (Rust SDK), contentauth org. 438 stars, pushed 2026-11-02, license shown as "other" by GitHub; docs for c2patool say Apache-2.0 / MIT dual. — [GitHub](https://github.com/contentauth/c2pa-rs)
 - c2patool CLI: Apache-2.0 and MIT dual, 160 stars, pushed 2026-10-30. Reads manifests of image, audio, video files. — [GitHub](https://github.com/contentauth/c2patool)
 - c2pa-python: Apache-2.0, 109 stars, pushed 2026-10-29. — [GitHub](https://github.com/contentauth/c2pa-python)
@@ -106,9 +120,11 @@ C2PA verification is well served by Adobe/CAI open-source tooling (Apache-2.0 or
 - Unofficial reverse-engineering and removal tools for SynthID exist (reverse-SynthID, 5,042 stars, license "other"; others claim removal). Unverified third-party claims, and a sign that SynthID is not tamper-proof. — [GitHub](https://github.com/aloshdenny/reverse-SynthID)
 
 ### Inferences
+
 - Pipeline suggestion: read C2PA with c2pa-python or c2patool first (cheap, high-precision when present, but metadata is often stripped), then an ML detector as a probabilistic signal, and Gemini or Google's tools for SynthID checks on Google images.
 
 ### Gaps
+
 - Midjourney, GPT-image and Qwen-Image C2PA/watermark status not verified from primary sources.
 - Licenses for TrustMark and Stable Signature weights not read.
 - Current Content Credentials trust-list/conformance details were not researched.

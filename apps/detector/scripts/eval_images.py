@@ -46,12 +46,16 @@ def tpr_at_fpr(scores: np.ndarray, labels: np.ndarray, fpr: float) -> float:
     return float((scores[labels == 1] > threshold).mean())
 
 
-def tpr_ci(scores: np.ndarray, labels: np.ndarray, fpr: float, n_boot: int = 1000, seed: int = 0) -> tuple[float, float]:
+def tpr_ci(
+    scores: np.ndarray, labels: np.ndarray, fpr: float, n_boot: int = 1000, seed: int = 0
+) -> tuple[float, float]:
     """95% bootstrap CI for TPR at a fixed FPR. Resamples each class and re-derives the threshold every time,
     because threshold noise dominates when there are few human texts."""
     rng = np.random.default_rng(seed)
     pos, neg = scores[labels == 1], scores[labels == 0]
-    stats = [(rng.choice(pos, len(pos)) > np.quantile(rng.choice(neg, len(neg)), 1 - fpr)).mean() for _ in range(n_boot)]
+    stats = [
+        (rng.choice(pos, len(pos)) > np.quantile(rng.choice(neg, len(neg)), 1 - fpr)).mean() for _ in range(n_boot)
+    ]
     return float(np.quantile(stats, 0.025)), float(np.quantile(stats, 0.975))
 
 
@@ -111,11 +115,21 @@ def score_folder(dataset: Path) -> list[dict]:
         else:
             verdict = asyncio.run(analyze(data=path.read_bytes(), filename=path.name))
         rel = path.relative_to(dataset)
-        row = {"path": rel.as_posix(), "group": "/".join(rel.parts[:2]) if len(rel.parts) > 2 else rel.parts[0],
-               "label": label, "modality": verdict.modality, "verdict": verdict.verdict,
-               "ood": any(e.status == "out_of_domain" for e in verdict.evidence)}
+        row = {
+            "path": rel.as_posix(),
+            "group": "/".join(rel.parts[:2]) if len(rel.parts) > 2 else rel.parts[0],
+            "label": label,
+            "modality": verdict.modality,
+            "verdict": verdict.verdict,
+            "ood": any(e.status == "out_of_domain" for e in verdict.evidence),
+        }
         for e in verdict.evidence:
-            row |= {f"{e.id}.status": e.status, f"{e.id}.raw": e.raw_score, f"{e.id}.p": e.p_ai, f"{e.id}.version": e.version}
+            row |= {
+                f"{e.id}.status": e.status,
+                f"{e.id}.raw": e.raw_score,
+                f"{e.id}.p": e.p_ai,
+                f"{e.id}.version": e.version,
+            }
         rows.append(row)
         print(f"[{i}/{len(files)}] {'ai  ' if label else 'real'} {verdict.verdict:16} {rel}", flush=True)
     return rows
@@ -143,12 +157,30 @@ def refuse(row: dict, policy: dict) -> str:
     if row["ood"] or str(row["verdict"]).startswith("declared"):
         return "inconclusive" if row["ood"] else row["verdict"]
     evidence = [
-        Evidence(id=d, detector=d, version=row.get(f"{d}.version") or "", modality=row["modality"], signal="learned",
-                 status=row[f"{d}.status"], raw_score=row.get(f"{d}.raw"), p_ai=row.get(f"{d}.p"))
-        for d in LEARNED if row.get(f"{d}.status")
+        Evidence(
+            id=d,
+            detector=d,
+            version=row.get(f"{d}.version") or "",
+            modality=row["modality"],
+            signal="learned",
+            status=row[f"{d}.status"],
+            raw_score=row.get(f"{d}.raw"),
+            p_ai=row.get(f"{d}.p"),
+        )
+        for d in LEARNED
+        if row.get(f"{d}.status")
     ]
-    routed = RoutedInput(modality=row["modality"], out_of_domain=False, reason=None, filename=None, mime=None,
-                         size_bytes=0, duration_s=None, token_count=None, sha256="")
+    routed = RoutedInput(
+        modality=row["modality"],
+        out_of_domain=False,
+        reason=None,
+        filename=None,
+        mime=None,
+        size_bytes=0,
+        duration_s=None,
+        token_count=None,
+        sha256="",
+    )
     return fuse(routed, evidence, request_id="eval", policy=policy).verdict
 
 
@@ -195,10 +227,13 @@ def fit_stacker(fit: list[dict], feats: list[str], target_fpr: float, miss: floa
     lo = min(float(np.quantile(p[labels == 1], miss, method="lower")), 0.5)
     n_human = int((labels == 0).sum())
     if n_human < 3 / target_fpr:
-        print(f"\nstacker: only {n_human} human fit rows; the {target_fpr:.0%} FPR band is rough below {3 / target_fpr:.0f}")
+        print(
+            f"\nstacker: only {n_human} human fit rows; "
+            f"the {target_fpr:.0%} FPR band is rough below {3 / target_fpr:.0f}"
+        )
     return {
         "intercept": round(float(w[-1]), 6),
-        "coef": {f: round(float(c), 6) for f, c in zip(feats, w[:-1])},
+        "coef": {f: round(float(c), 6) for f, c in zip(feats, w[:-1], strict=True)},
         "versions": {f: next(iter(v)) for f, v in versions.items()},
         "bands": {"no_ai_signal_below": round(lo, 4), "likely_ai_above": round(hi, 4)},
         "target_fpr": target_fpr,
@@ -216,13 +251,17 @@ def verdict_table(test: list[dict], modality: str, policies: dict[str, dict]) ->
         groups = sorted({r["group"] for r in rows}, key=lambda g: (not g.startswith("real"), g))
         for group in groups + ["ALL real", "ALL ai"]:
             label = {"ALL real": 0, "ALL ai": 1}.get(group)
-            v = Counter(verdict for r, verdict in got if (r["group"] == group if label is None else r["label"] == label))
+            v = Counter(
+                verdict for r, verdict in got if (r["group"] == group if label is None else r["label"] == label)
+            )
             n = sum(v.values())
             if not n:
                 continue
             lo, hi = wilson(v["likely_ai"], n)
-            print(f"    {group:28} {n:5} {v['likely_ai'] / n:8.3f} [{lo:.3f}-{hi:.3f}] "
-                  f"{v['inconclusive'] / n:13.3f} {v['no_ai_signal'] / n:13.3f}")
+            print(
+                f"    {group:28} {n:5} {v['likely_ai'] / n:8.3f} [{lo:.3f}-{hi:.3f}] "
+                f"{v['inconclusive'] / n:13.3f} {v['no_ai_signal'] / n:13.3f}"
+            )
 
 
 def main() -> None:
@@ -230,10 +269,14 @@ def main() -> None:
     parser.add_argument("dataset", type=Path, nargs="?")
     parser.add_argument("--csv", type=Path, help="write per-item rows here")
     parser.add_argument("--from-csv", type=Path, help="refit from a saved --csv run instead of scoring a folder")
-    parser.add_argument("--no-domain-gate", action="store_true",
-                        help="score palette/transparent/small images anyway, to test whether the gate is needed")
-    parser.add_argument("--skip-spai", action="store_true",
-                        help="skip SPAI (~8 s/image, weight 0 in fusion.yaml) for large sets")
+    parser.add_argument(
+        "--no-domain-gate",
+        action="store_true",
+        help="score palette/transparent/small images anyway, to test whether the gate is needed",
+    )
+    parser.add_argument(
+        "--skip-spai", action="store_true", help="skip SPAI (~8 s/image, weight 0 in fusion.yaml) for large sets"
+    )
     parser.add_argument("--test-share", type=float, default=0.5, help="share of rows held out for measurement")
     parser.add_argument("--stack", default="txt.fakespot,txt.desklib", help="detector ids the stacker combines")
     parser.add_argument("--target-fpr", type=float, default=0.01, help="FPR the likely_ai band is set for")
@@ -259,8 +302,10 @@ def main() -> None:
 
     fit = [r for r in rows if not in_test(r["path"], args.test_share)]
     test = [r for r in rows if in_test(r["path"], args.test_share)]
-    print(f"\nsplit: fit {len(fit)} ({sum(r['label'] for r in fit)} ai) | "
-          f"test {len(test)} ({sum(r['label'] for r in test)} ai) | out of domain: {sum(r['ood'] for r in rows)}")
+    print(
+        f"\nsplit: fit {len(fit)} ({sum(r['label'] for r in fit)} ai) | "
+        f"test {len(test)} ({sum(r['label'] for r in test)} ai) | out of domain: {sum(r['ood'] for r in rows)}"
+    )
     measured = detector_table(test)
 
     platt = {}
@@ -269,7 +314,12 @@ def main() -> None:
         labels = np.array([r["label"] for r in ok])
         if len(set(labels.tolist())) == 2:
             a, b = fit_platt(np.array([r[f"{det}.raw"] for r in ok], dtype=float), labels)
-            platt[det] = {"a": round(a, 6), "b": round(b, 6), "set": f"{set_name}-fit{len(ok)}", **measured.get(det, {})}
+            platt[det] = {
+                "a": round(a, 6),
+                "b": round(b, 6),
+                "set": f"{set_name}-fit{len(ok)}",
+                **measured.get(det, {}),
+            }
 
     feats = [f for f in args.stack.split(",") if f]
     modality = MODALITY[feats[0].split(".")[0]]
@@ -283,14 +333,22 @@ def main() -> None:
         y = np.array([r["label"] for r in ok])
         if len(set(y.tolist())) == 2:
             lo, hi = tpr_ci(s, y, 0.01)
-            print(f"\nstacker on the test split: n={len(ok)} AUROC {auroc(s, y):.3f} "
-                  f"TPR@1%FPR {tpr_at_fpr(s, y, 0.01):.3f} [{lo:.2f}-{hi:.2f}]")
+            print(
+                f"\nstacker on the test split: n={len(ok)} AUROC {auroc(s, y):.3f} "
+                f"TPR@1%FPR {tpr_at_fpr(s, y, 0.01):.3f} [{lo:.2f}-{hi:.2f}]"
+            )
     for m in sorted({r["modality"] for r in test}):
         verdict_table(test, m, {"current fusion.yaml": current, "proposed (fit split)": proposed})
 
     print("\nproposed blocks for ai_detector/fusion.yaml (fit on the fit split only):")
-    print(yaml.safe_dump({"platt": platt} | ({"stackers": {modality: stacker}} if stacker else {}),
-                         sort_keys=False, default_flow_style=None, width=120))
+    print(
+        yaml.safe_dump(
+            {"platt": platt} | ({"stackers": {modality: stacker}} if stacker else {}),
+            sort_keys=False,
+            default_flow_style=None,
+            width=120,
+        )
+    )
 
 
 if __name__ == "__main__":

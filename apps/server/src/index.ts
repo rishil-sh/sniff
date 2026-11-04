@@ -4,6 +4,7 @@ import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { appRouter } from "@sniff/api/routers/index";
+import { runMigrations } from "@sniff/db/migrate";
 import { initLogger } from "evlog";
 import { createAuthMiddleware } from "evlog/better-auth";
 import type { BetterAuthInstance } from "evlog/better-auth";
@@ -12,8 +13,6 @@ import { evlog } from "evlog/hono";
 import type { EvlogVariables } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-
-import { runMigrations } from "@sniff/db/migrate";
 
 import { createContext } from "./context";
 import { ENV } from "./env.server";

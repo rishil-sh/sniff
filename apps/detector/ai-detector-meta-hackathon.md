@@ -150,11 +150,11 @@ Binoculars and Fast-DetectGPT are built from the _same two quantities_ when the 
 ```python
 # y = tokens[1:]; lb, li = logits[:-1] from Llama-3.1-8B (base/observer) and -Instruct (performer)
 logp_i, p_b = li.log_softmax(-1), lb.softmax(-1)
-ll  = logp_i.gather(-1, y[:, None]).squeeze(-1)          # log-lik of observed tokens
-mu  = (p_b * logp_i).sum(-1)                              # expected log-lik under base's distribution
+ll = logp_i.gather(-1, y[:, None]).squeeze(-1)  # log-lik of observed tokens
+mu = (p_b * logp_i).sum(-1)  # expected log-lik under base's distribution
 var = (p_b * logp_i**2).sum(-1) - mu**2
-binoculars  = ll.mean() / mu.mean()                       # = log PPL / log X-PPL; lower => machine-like
-fast_detect = (ll.sum() - mu.sum()) / var.sum().sqrt()    # higher => machine-like
+binoculars = ll.mean() / mu.mean()  # = log PPL / log X-PPL; lower => machine-like
+fast_detect = (ll.sum() - mu.sum()) / var.sum().sqrt()  # higher => machine-like
 ```
 
 **Images.**
@@ -357,10 +357,18 @@ The `details` field depends on the signal type:
 client = OpenAI(base_url="https://api.meta.ai/v1", api_key=os.environ["MODEL_API_KEY"])
 resp = client.chat.completions.create(
     model="muse-spark-1.3",
-    messages=[{"role": "system", "content": "Explain the verdict computed by our code. Never change it. Cite evidence ids."},
-              {"role": "user", "content": [{"type": "text", "text": json.dumps(verdict)},
-                                           {"type": "image_url", "image_url": {"url": data_url}}]}],
-    response_format={"type": "json_schema", "json_schema": {"name": "Report", "schema": REPORT_SCHEMA, "strict": True}})
+    messages=[
+        {"role": "system", "content": "Explain the verdict computed by our code. Never change it. Cite evidence ids."},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": json.dumps(verdict)},
+                {"type": "image_url", "image_url": {"url": data_url}},
+            ],
+        },
+    ],
+    response_format={"type": "json_schema", "json_schema": {"name": "Report", "schema": REPORT_SCHEMA, "strict": True}},
+)
 ```
 
 **How the video path reuses the image path:**

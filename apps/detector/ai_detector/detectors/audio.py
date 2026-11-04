@@ -23,6 +23,7 @@ from unittest import mock
 
 import numpy as np
 
+from ai_detector import HF_CACHE
 from ai_detector.router import RoutedInput, ffmpeg_exe
 from ai_detector.schemas import Calibration, Evidence
 
@@ -81,8 +82,24 @@ def to_wav16(data: bytes, suffix: str = ".wav") -> bytes:
         tmp.write(data)
         tmp.flush()
         out = subprocess.run(
-            [FFMPEG, "-v", "error", "-i", tmp.name, "-ac", "1", "-ar", str(SR), "-c:a", "pcm_s16le",
-             "-map_metadata", "-1", "-f", "wav", "pipe:1"],
+            [
+                FFMPEG,
+                "-v",
+                "error",
+                "-i",
+                tmp.name,
+                "-ac",
+                "1",
+                "-ar",
+                str(SR),
+                "-c:a",
+                "pcm_s16le",
+                "-map_metadata",
+                "-1",
+                "-f",
+                "wav",
+                "pipe:1",
+            ],
             capture_output=True,
             timeout=120,
             check=True,
@@ -146,6 +163,7 @@ def load_mambo():
         path = snapshot_download(
             MAMBO_REPO,
             revision=MAMBO_REV,
+            cache_dir=HF_CACHE,
             allow_patterns=["_net.py", "_hydra/*", "mamba_ssm/**", "*.pt", "LICENSE.source"],
         )
         stubbed = False
@@ -199,7 +217,7 @@ def load_dfarena():
 
         device = _device()
         # Remote code reviewed at this revision: plain torch/einops, no I/O beyond the XLS-R config.
-        model = AutoModel.from_pretrained(DFA_REPO, revision=DFA_REV, trust_remote_code=True)
+        model = AutoModel.from_pretrained(DFA_REPO, revision=DFA_REV, cache_dir=HF_CACHE, trust_remote_code=True)
         _models["dfarena"] = (model.to(device).eval(), device)
         return _models["dfarena"]
 
@@ -260,8 +278,12 @@ def load_w2vbert():
             from transformers import AutoFeatureExtractor, Wav2Vec2BertModel
 
             device = _embed_device()
-            fe = AutoFeatureExtractor.from_pretrained(W2VBERT_REPO, revision=W2VBERT_REV)
-            model = Wav2Vec2BertModel.from_pretrained(W2VBERT_REPO, revision=W2VBERT_REV).to(device).eval()
+            fe = AutoFeatureExtractor.from_pretrained(W2VBERT_REPO, revision=W2VBERT_REV, cache_dir=HF_CACHE)
+            model = (
+                Wav2Vec2BertModel.from_pretrained(W2VBERT_REPO, revision=W2VBERT_REV, cache_dir=HF_CACHE)
+                .to(device)
+                .eval()
+            )
             _models["w2vbert"] = (fe, model, device)
         return _models["w2vbert"]
 
@@ -304,11 +326,18 @@ def score_w2vbert(chunks: list[np.ndarray]) -> list[float]:
     return (((feats - probe["mean"]) / probe["scale"]) @ probe["coef"] + probe["intercept"]).tolist()
 
 
-def _learned(evidence_id, detector, version, score_fn, wav, size, *, issue: str | None,
-             calibration: Calibration | None = None) -> Evidence:
+def _learned(
+    evidence_id, detector, version, score_fn, wav, size, *, issue: str | None, calibration: Calibration | None = None
+) -> Evidence:
     started = time.perf_counter()
-    base = {"id": evidence_id, "detector": detector, "version": version, "modality": "audio",
-            "signal": "learned", "weight": WEIGHTS[evidence_id]}
+    base = {
+        "id": evidence_id,
+        "detector": detector,
+        "version": version,
+        "modality": "audio",
+        "signal": "learned",
+        "weight": WEIGHTS[evidence_id],
+    }
     if issue:
         return Evidence(**base, status="out_of_domain", details={"reason": issue})
     try:
@@ -328,20 +357,28 @@ def _learned(evidence_id, detector, version, score_fn, wav, size, *, issue: str 
                 "window_s": round(size / SR, 3),
                 "hop_s": HOP_S,
                 "top25_p_ai": round(_sigmoid(agg["top25_mean"]), 4),
-                "timeline": [{"t": round(t, 2), "p_ai": round(_sigmoid(x), 4)} for (t, _), x in zip(wins, logits)],
+                "timeline": [
+                    {"t": round(t, 2), "p_ai": round(_sigmoid(x), 4)} for (t, _), x in zip(wins, logits, strict=True)
+                ],
             },
             calibration=calibration or Calibration(set="uncalibrated-sigmoid"),
             latency_ms=int((time.perf_counter() - started) * 1000),
         )
     except Exception as exc:  # noqa: BLE001
-        return Evidence(**base, status="error", details={"error": str(exc)},
-                        latency_ms=int((time.perf_counter() - started) * 1000))
+        return Evidence(
+            **base, status="error", details={"error": str(exc)}, latency_ms=int((time.perf_counter() - started) * 1000)
+        )
 
 
 def _watermark(wav: np.ndarray) -> Evidence:
     started = time.perf_counter()
-    base = {"id": "aud.audioseal", "detector": "audioseal", "version": SEAL_VERSION, "modality": "audio",
-            "signal": "watermark"}
+    base = {
+        "id": "aud.audioseal",
+        "detector": "audioseal",
+        "version": SEAL_VERSION,
+        "modality": "audio",
+        "signal": "watermark",
+    }
     try:
         probs = detect_audioseal(wav)
         segs = segments(probs > 0.5, SR, WM_MIN_SEGMENT_S)
@@ -352,11 +389,17 @@ def _watermark(wav: np.ndarray) -> Evidence:
             "segments": segs,
             "note": "Detects only Meta AudioSeal marks. No mark says nothing about other generators.",
         }
-        return Evidence(**base, status="ok", points_to="ai" if segs else "none", details=details,
-                        latency_ms=int((time.perf_counter() - started) * 1000))
+        return Evidence(
+            **base,
+            status="ok",
+            points_to="ai" if segs else "none",
+            details=details,
+            latency_ms=int((time.perf_counter() - started) * 1000),
+        )
     except Exception as exc:  # noqa: BLE001
-        return Evidence(**base, status="error", details={"error": str(exc)},
-                        latency_ms=int((time.perf_counter() - started) * 1000))
+        return Evidence(
+            **base, status="error", details={"error": str(exc)}, latency_ms=int((time.perf_counter() - started) * 1000)
+        )
 
 
 SUFFIX = {"audio/wav": ".wav", "audio/flac": ".flac", "audio/mpeg": ".mp3", "audio/mp4": ".m4a"}
@@ -370,8 +413,17 @@ async def collect(routed: RoutedInput) -> list[Evidence]:
     try:
         wav = decode(routed.data, SUFFIX.get(routed.mime or "", ".wav"))
     except Exception as exc:  # noqa: BLE001
-        return [Evidence(id="aud.decode", detector="ffmpeg", version="system", modality="audio",
-                         signal="learned", status="error", details={"error": str(exc)})]
+        return [
+            Evidence(
+                id="aud.decode",
+                detector="ffmpeg",
+                version="system",
+                modality="audio",
+                signal="learned",
+                status="error",
+                details={"error": str(exc)},
+            )
+        ]
     issue = "narrowband (phone-quality, <= 8 kHz) audio; the detectors are untested there" if narrowband(wav) else None
     # ponytail: sequential; ~300 windows on a 10-minute clip is slow on CPU, fine on the L40S
     return [
@@ -384,11 +436,26 @@ async def collect(routed: RoutedInput) -> list[Evidence]:
 
 def _probe(wav: np.ndarray, issue: str | None) -> Evidence:
     if not PROBE_PATH.exists():
-        return Evidence(id="aud.w2vbert", detector="w2v-bert-2.0-probe", version="untrained", modality="audio",
-                        signal="learned", status="skipped", details={"reason": "run scripts/train_audio_probe.py"})
+        return Evidence(
+            id="aud.w2vbert",
+            detector="w2v-bert-2.0-probe",
+            version="untrained",
+            modality="audio",
+            signal="learned",
+            status="skipped",
+            details={"reason": "run scripts/train_audio_probe.py"},
+        )
     tag = str(load_probe()["tag"])
     version = f"{W2VBERT_REPO}@{W2VBERT_REV[:7]}+probe:{tag}"
     # Class-balanced logistic output, threshold picked by leave-one-generator-out CV; not Platt-scaled.
     calibration = Calibration(set=f"probe {tag}: English, leave-one-generator-out CV (docs/audio-detection.md)")
-    return _learned("aud.w2vbert", "w2v-bert-2.0-probe", version, score_w2vbert, wav, W2VBERT_WINDOW,
-                    issue=issue, calibration=calibration)
+    return _learned(
+        "aud.w2vbert",
+        "w2v-bert-2.0-probe",
+        version,
+        score_w2vbert,
+        wav,
+        W2VBERT_WINDOW,
+        issue=issue,
+        calibration=calibration,
+    )

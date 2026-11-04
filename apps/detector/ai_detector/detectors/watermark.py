@@ -22,10 +22,7 @@ MAX_BIT_ERROR_RATE = 0.125
 
 def match_scheme(decoded: dict[str, list[int]]) -> tuple[str | None, dict[str, int]]:
     """Compare decoded bits against each known message. Pure; unit-tested."""
-    errors = {
-        name: sum(a != b for a, b in zip(decoded[name], bits, strict=True))
-        for name, bits in SCHEMES.items()
-    }
+    errors = {name: sum(a != b for a, b in zip(decoded[name], bits, strict=True)) for name, bits in SCHEMES.items()}
     hit = next(
         (name for name, err in errors.items() if err <= MAX_BIT_ERROR_RATE * len(SCHEMES[name])),
         None,

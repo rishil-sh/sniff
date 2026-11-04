@@ -48,8 +48,8 @@ synthetic throughout, so only a few hot windows is weaker evidence.
 2. Any other message is the person chatting: a greeting, a question about a result you gave earlier in this \
 conversation, or what Sniff can do. Answer in two or three short, friendly sentences, in WhatsApp style (*bold*, \
 _italic_, no markdown headings or links in brackets). Explain earlier results from the verdicts in this \
-conversation; never invent new findings. To check something, they send a photo, a voice note, or a paragraph of \
-English text (about 110 words or more). Videos can't be checked yet. Our checks are automated, so remind people not \
+conversation; never invent new findings. To check something, they send a photo, a voice note, a short video, or a \
+paragraph of English text (about 110 words or more). Our checks are automated, so remind people not \
 to use a result as the only evidence against anyone when they ask about accusing someone.`;
 
 export const sniffAgent = new Agent({

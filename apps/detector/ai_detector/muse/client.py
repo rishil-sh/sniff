@@ -23,12 +23,13 @@ VERIFY_LINKS = (
 # ponytail: measured numbers are pasted from fusion.yaml's stacker comment; update both when you refit
 SYSTEM_PROMPT = """\
 You write the explanation line of a WhatsApp reply from an AI-content checker for text, images, voice notes and \
-video. You receive the verdict JSON our code produced; `modality` says what was sent. Our code writes the bold headline (the verdict) and any footer; you write only `why`, plus `lean`.
+video. You receive the verdict JSON our code produced; `modality` says what was sent. Our code writes the bold \
+headline (the verdict) and any footer; you write only `why`, plus `lean`.
 
 `why`:
 - One or two short sentences, at most 35 words, that a 12-year-old understands. Speak as "we".
-- Say what we found in the text, picture, voice or video, in everyday words. No numbers, percentages, field names or technical words \
-(classifier, model, score, probability, token, logit, calibrated, detector names).
+- Say what we found in the text, picture, voice or video, in everyday words. No numbers, percentages, field names or \
+technical words (classifier, model, score, probability, token, logit, calibrated, detector names).
 - For likely_ai, declared_ai, no_ai_signal and declared_capture: state the finding confidently, as a fact about \
 what we found. No hedging words (likely, fairly, may, might, seems, probably, not certain, hint) and no disclaimers.
 - For inconclusive: say plainly what points each way, in one confident sentence about the signals, without \
@@ -75,8 +76,12 @@ ANSWER_SCHEMA = {
     "additionalProperties": False,
 }
 
-FIXED_LEAN: dict[str, Lean] = {"likely_ai": "ai", "declared_ai": "ai", "no_ai_signal": "human",
-                               "declared_capture": "human"}
+FIXED_LEAN: dict[str, Lean] = {
+    "likely_ai": "ai",
+    "declared_ai": "ai",
+    "no_ai_signal": "human",
+    "declared_capture": "human",
+}
 
 # WhatsApp formatting: *bold*, _italic_. The headline is code's, so its confidence matches the measured verdict:
 # on held-out text 96.5% of likely_ai and 97.8% of no_ai_signal calls were right; the 2.8% left inconclusive
@@ -103,8 +108,12 @@ TEMPLATE_WHY = {
     "human": "Most of the signals point to a real person, but a few point the other way.",
     "unclear": "The signals point both ways in equal measure.",
 }
-TOOLS = {"text": "AI writing tools", "image": "AI image generators", "audio": "AI voice generators",
-         "video": "AI video generators"}
+TOOLS = {
+    "text": "AI writing tools",
+    "image": "AI image generators",
+    "audio": "AI voice generators",
+    "video": "AI video generators",
+}
 # shown under AI verdicts: a wrong call can cost a real person, and 2.4% of human texts are flagged (16% academic)
 AI_FOOTER = "_Automated check: please don't use it as the only evidence against anyone._"
 
@@ -161,8 +170,10 @@ def _unchecked_why(verdict: Verdict) -> str:
         clip = "voice note" if verdict.modality == "audio" else "video"
         return f"That {clip} is too long. Please send a shorter clip."
     if verdict.modality == "image" and any("palette" in (e.details.get("reason") or "") for e in verdict.evidence):
-        return ("This picture was saved with a reduced colour palette, which wipes out the traces we look for. "
-                "Please send the original file, or a JPEG or full-colour PNG.")
+        return (
+            "This picture was saved with a reduced colour palette, which wipes out the traces we look for. "
+            "Please send the original file, or a JPEG or full-colour PNG."
+        )
     return "We couldn't read this file. Please try a different file or format."
 
 
@@ -171,8 +182,11 @@ def whatsapp_message(verdict: Verdict, lean: Lean, why: str | None = None) -> st
     if verdict.p_ai is None and verdict.verdict == "inconclusive":
         return f"{HEADLINES['unchecked']}\n\n{_unchecked_why(verdict)}"
     key = verdict.verdict if verdict.verdict != "inconclusive" else lean
-    headline = (HEADLINES.get((verdict.verdict, verdict.modality)) or HEADLINES.get(verdict.verdict)
-                or HEADLINES[("inconclusive", lean)])
+    headline = (
+        HEADLINES.get((verdict.verdict, verdict.modality))
+        or HEADLINES.get(verdict.verdict)
+        or HEADLINES[("inconclusive", lean)]
+    )
     message = f"{headline}\n\n{why or TEMPLATE_WHY[key].format(tools=TOOLS.get(verdict.modality, 'AI tools'))}"
     return f"{message}\n\n{AI_FOOTER}" if lean == "ai" else message
 
@@ -215,14 +229,21 @@ def _audio_reasons(verdict: Verdict) -> tuple[str, list[ReportReason]]:
         hot = sum(point["p_ai"] >= 0.8 for point in timeline)
         ranges = hot_ranges(timeline, probe.details.get("window_s", 4.0))
         where = f"; synthetic-sounding at {_fmt_ranges(ranges)}" if ranges else ""
-        reasons.append(ReportReason(evidence_id=probe.id, text=(
-            f"Deciding detector, w2v-BERT 2.0 probe: p(AI) {probe.p_ai:.2f}. "
-            f"{hot} of {len(timeline)} four-second windows scored 0.8 or higher{where}.")))
+        reasons.append(
+            ReportReason(
+                evidence_id=probe.id,
+                text=(
+                    f"Deciding detector, w2v-BERT 2.0 probe: p(AI) {probe.p_ai:.2f}. "
+                    f"{hot} of {len(timeline)} four-second windows scored 0.8 or higher{where}."
+                ),
+            )
+        )
         summary = {
             "likely_ai": f"Likely AI-generated speech. The probe scored {probe.p_ai:.2f}"
-                         + (" across most of the clip." if timeline and hot >= 0.75 * len(timeline) else "."),
+            + (" across most of the clip." if timeline and hot >= 0.75 * len(timeline) else "."),
             "no_ai_signal": f"No AI-voice signal found (probe {probe.p_ai:.2f}). This is not proof the voice is human.",
-            "inconclusive": f"Inconclusive. The probe scored {probe.p_ai:.2f}, between the no-signal and likely-AI bands.",
+            "inconclusive": f"Inconclusive. The probe scored {probe.p_ai:.2f}, "
+            "between the no-signal and likely-AI bands.",
         }.get(verdict.verdict, summary)
     elif probe and probe.status in {"out_of_domain", "skipped", "error"}:
         why = probe.details.get("reason") or probe.details.get("error") or probe.status
@@ -231,8 +252,11 @@ def _audio_reasons(verdict: Verdict) -> tuple[str, list[ReportReason]]:
     seal = by_id.get("aud.audioseal")
     if seal and seal.status == "ok":
         segs = seal.details.get("segments") or []
-        text = ("AudioSeal watermark found at " + ", ".join(f"{g['start']:.1f}-{g['end']:.1f} s" for g in segs) + "."
-                if segs else "No AudioSeal watermark (this checks Meta's watermark only).")
+        text = (
+            "AudioSeal watermark found at " + ", ".join(f"{g['start']:.1f}-{g['end']:.1f} s" for g in segs) + "."
+            if segs
+            else "No AudioSeal watermark (this checks Meta's watermark only)."
+        )
         reasons.append(ReportReason(evidence_id=seal.id, text=text))
         if segs:
             summary = "Declared AI: a Meta AudioSeal watermark is embedded in this audio."
@@ -244,12 +268,22 @@ def _audio_reasons(verdict: Verdict) -> tuple[str, list[ReportReason]]:
             reasons.append(ReportReason(evidence_id=c2pa.id, text=f"C2PA Content Credentials from {gen} ({src})."))
         else:
             reasons.append(ReportReason(evidence_id=c2pa.id, text="No C2PA Content Credentials in the file."))
-    context = [f"{name} {e.p_ai:.2f}" for eid, name in (("aud.dfarena", "DF Arena"), ("aud.mambo", "XLSR-MamBo"))
-               if (e := by_id.get(eid)) and e.status == "ok" and e.p_ai is not None]
+    context = [
+        f"{name} {e.p_ai:.2f}"
+        for eid, name in (("aud.dfarena", "DF Arena"), ("aud.mambo", "XLSR-MamBo"))
+        if (e := by_id.get(eid)) and e.status == "ok" and e.p_ai is not None
+    ]
     if context:
-        reasons.append(ReportReason(evidence_id="aud.dfarena", text=(
-            "Context only, not used in the verdict: " + ", ".join(context)
-            + " (both flag many real human voices as AI in our tests).")))
+        reasons.append(
+            ReportReason(
+                evidence_id="aud.dfarena",
+                text=(
+                    "Context only, not used in the verdict: "
+                    + ", ".join(context)
+                    + " (both flag many real human voices as AI in our tests)."
+                ),
+            )
+        )
     router = by_id.get("sys.router")
     if router and router.details.get("reason"):
         reasons.append(ReportReason(evidence_id=router.id, text=f"Out of scope: {router.details['reason']}."))
@@ -258,10 +292,14 @@ def _audio_reasons(verdict: Verdict) -> tuple[str, list[ReportReason]]:
 
 
 NAMES = {
-    "img.head": "Screenshot-robust Community Forensics head", "img.commfor": "Community Forensics",
-    "img.clip": "CLIP linear probe", "img.spai": "SPAI spectral detector",
-    "txt.fakespot": "Fakespot classifier", "txt.desklib": "Desklib classifier",
-    "txt.binoculars": "Binoculars", "txt.fastdetect": "Fast-DetectGPT",
+    "img.head": "Screenshot-robust Community Forensics head",
+    "img.commfor": "Community Forensics",
+    "img.clip": "CLIP linear probe",
+    "img.spai": "SPAI spectral detector",
+    "txt.fakespot": "Fakespot classifier",
+    "txt.desklib": "Desklib classifier",
+    "txt.binoculars": "Binoculars",
+    "txt.fastdetect": "Fast-DetectGPT",
 }
 POINTS = {"ai": "points to AI", "real": "points to human-made", "none": "points neither way"}
 
@@ -279,25 +317,45 @@ def _plain_reasons(verdict: Verdict) -> list[ReportReason]:
         else:
             reasons.append(ReportReason(evidence_id=c2pa.id, text="No C2PA or IPTC metadata in the file."))
     if tamper := by_id.get("txt.tamper"):
-        reasons.append(ReportReason(evidence_id=tamper.id, text=(
-            f"Removed {tamper.details.get('hidden', 0)} invisible and {tamper.details.get('lookalike', 0)} "
-            "look-alike characters before scoring (a known trick to fool detectors).")))
+        reasons.append(
+            ReportReason(
+                evidence_id=tamper.id,
+                text=(
+                    f"Removed {tamper.details.get('hidden', 0)} invisible and {tamper.details.get('lookalike', 0)} "
+                    "look-alike characters before scoring (a known trick to fool detectors)."
+                ),
+            )
+        )
     weights = verdict.fusion.weights
 
     def votes(e) -> bool:  # same rule as fusion.weight_of: unlisted ids vote
         w = weights.get(e.id)
         return (w if w is not None else 1.0) > 0
 
-    scored = [e for e in verdict.evidence
-              if e.status == "ok" and e.p_ai is not None and e.signal != "provenance" and e.id != "txt.tamper"]
+    scored = [
+        e
+        for e in verdict.evidence
+        if e.status == "ok" and e.p_ai is not None and e.signal != "provenance" and e.id != "txt.tamper"
+    ]
     for e in (e for e in scored if votes(e)):
-        reasons.append(ReportReason(evidence_id=e.id, text=(
-            f"Voting detector, {NAMES.get(e.id, e.detector)}: p(AI) {e.p_ai:.2f}, {POINTS[e.points_to]}.")))
+        reasons.append(
+            ReportReason(
+                evidence_id=e.id,
+                text=(f"Voting detector, {NAMES.get(e.id, e.detector)}: p(AI) {e.p_ai:.2f}, {POINTS[e.points_to]}."),
+            )
+        )
     context = [e for e in scored if not votes(e)]
     if context:
-        reasons.append(ReportReason(evidence_id=context[0].id, text=(
-            "Context only, not used in the verdict: "
-            + ", ".join(f"{NAMES.get(e.id, e.detector)} {e.p_ai:.2f}" for e in context) + ".")))
+        reasons.append(
+            ReportReason(
+                evidence_id=context[0].id,
+                text=(
+                    "Context only, not used in the verdict: "
+                    + ", ".join(f"{NAMES.get(e.id, e.detector)} {e.p_ai:.2f}" for e in context)
+                    + "."
+                ),
+            )
+        )
     seen = set()
     for e in verdict.evidence:  # detectors often share one reason (e.g. a palette image): say it once
         why = e.details.get("reason") if e.status == "out_of_domain" else None
@@ -359,8 +417,14 @@ def _stub_report(verdict: Verdict, *, send_to_muse: bool) -> Report:
             f"{c2pa.details.get('digital_source_type') or 'AI-generated'}."
         )
     lean = lean_for(verdict)
-    return Report(model="stub", summary=summary, answer=whatsapp_message(verdict, lean), lean=lean, reasons=reasons,
-                  caveats=caveats)
+    return Report(
+        model="stub",
+        summary=summary,
+        answer=whatsapp_message(verdict, lean),
+        lean=lean,
+        reasons=reasons,
+        caveats=caveats,
+    )
 
 
 def explain_verdict(verdict: Verdict, *, send_to_muse: bool) -> Report:

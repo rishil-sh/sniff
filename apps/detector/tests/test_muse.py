@@ -7,16 +7,48 @@ from ai_detector.schemas import Evidence, FusionTrace, Verdict
 
 def _verdict(label, p_ai, reason=None):
     evidence = [
-        Evidence(id="txt.desklib", detector="d", version="v", modality="text", signal="learned", status="ok",
-                 raw_score=0.1, p_ai=0.52, details={"window_logits": [2.0, -1.5]}),
-        Evidence(id="txt.gltr", detector="g", version="v", modality="text", signal="learned", status="ok",
-                 details={"shares": {"top-10": 0.6}, "tokens": [["secret", "top-10"]]}),
+        Evidence(
+            id="txt.desklib",
+            detector="d",
+            version="v",
+            modality="text",
+            signal="learned",
+            status="ok",
+            raw_score=0.1,
+            p_ai=0.52,
+            details={"window_logits": [2.0, -1.5]},
+        ),
+        Evidence(
+            id="txt.gltr",
+            detector="g",
+            version="v",
+            modality="text",
+            signal="learned",
+            status="ok",
+            details={"shares": {"top-10": 0.6}, "tokens": [["secret", "top-10"]]},
+        ),
     ]
     if reason:
-        evidence.append(Evidence(id="sys.router", detector="r", version="v", modality="text", signal="learned",
-                                 status="out_of_domain", details={"reason": reason}))
-    return Verdict(request_id="r", modality="text", sha256="s", verdict=label, p_ai=p_ai, evidence=evidence,
-                   fusion=FusionTrace(policy="t"))
+        evidence.append(
+            Evidence(
+                id="sys.router",
+                detector="r",
+                version="v",
+                modality="text",
+                signal="learned",
+                status="out_of_domain",
+                details={"reason": reason},
+            )
+        )
+    return Verdict(
+        request_id="r",
+        modality="text",
+        sha256="s",
+        verdict=label,
+        p_ai=p_ai,
+        evidence=evidence,
+        fusion=FusionTrace(policy="t"),
+    )
 
 
 def _fake_muse(monkeypatch, reply=None, error=None):
@@ -43,8 +75,9 @@ def test_whatsapp_message_headline_is_set_by_code():
     assert msg.startswith("✍️ *Written by a human*") and muse.AI_FOOTER not in msg
     report = muse.explain_verdict(_verdict("inconclusive", 0.3), send_to_muse=False)
     assert report.lean == "human" and report.answer.startswith("🤔 *Can't say for sure. Best guess: human*")
-    report = muse.explain_verdict(_verdict("inconclusive", None, reason="text shorter than 150 tokens"),
-                                  send_to_muse=False)
+    report = muse.explain_verdict(
+        _verdict("inconclusive", None, reason="text shorter than 150 tokens"), send_to_muse=False
+    )
     assert report.lean == "unclear" and "at least a full paragraph" in report.answer
 
 
@@ -83,8 +116,18 @@ def test_whatsapp_reply_names_the_right_kind_of_ai_per_modality():
 
 def test_stub_reasons_are_plain_voting_first():
     v = _verdict("likely_ai", 0.9)
-    v.evidence.append(Evidence(id="txt.binoculars", detector="b", version="v", modality="text", signal="zero_shot",
-                               status="ok", p_ai=0.7, points_to="ai"))
+    v.evidence.append(
+        Evidence(
+            id="txt.binoculars",
+            detector="b",
+            version="v",
+            modality="text",
+            signal="zero_shot",
+            status="ok",
+            p_ai=0.7,
+            points_to="ai",
+        )
+    )
     v.fusion = FusionTrace(policy="t", weights={"txt.desklib": 0.5, "txt.binoculars": 0})
     report = muse.explain_verdict(v, send_to_muse=False)
     texts = [r.text for r in report.reasons]
@@ -95,10 +138,27 @@ def test_stub_reasons_are_plain_voting_first():
 
 
 def test_palette_image_says_why_once():
-    ev = [Evidence(id=i, detector="d", version="v", modality="image", signal="learned", status="out_of_domain",
-                   details={"reason": "P-mode palette image"}) for i in ("img.head", "img.clip")]
-    v = Verdict(request_id="r", modality="image", sha256="s", verdict="inconclusive", p_ai=None, evidence=ev,
-                fusion=FusionTrace(policy="t"))
+    ev = [
+        Evidence(
+            id=i,
+            detector="d",
+            version="v",
+            modality="image",
+            signal="learned",
+            status="out_of_domain",
+            details={"reason": "P-mode palette image"},
+        )
+        for i in ("img.head", "img.clip")
+    ]
+    v = Verdict(
+        request_id="r",
+        modality="image",
+        sha256="s",
+        verdict="inconclusive",
+        p_ai=None,
+        evidence=ev,
+        fusion=FusionTrace(policy="t"),
+    )
     report = muse.explain_verdict(v, send_to_muse=False)
     assert [r.text for r in report.reasons] == ["Out of scope: P-mode palette image."]
     assert "reduced colour palette" in report.answer

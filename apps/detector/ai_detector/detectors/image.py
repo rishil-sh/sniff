@@ -12,6 +12,7 @@ import time
 import zipfile
 from pathlib import Path
 
+from ai_detector import CACHE_DIR, HF_CACHE
 from ai_detector.router import RoutedInput
 from ai_detector.schemas import Calibration, Evidence
 
@@ -19,8 +20,6 @@ COMMFOR_REPO = "OwensLab/commfor-model-384"
 COMMFOR_VERSION = f"{COMMFOR_REPO}@main"
 CLIP_VERSION = "clipdet_latent10k_plus"
 CLIP_WEIGHTS_URL = "https://www.grip.unina.it/download/prog/DMimageDetection/weights_clipdet.zip"
-CACHE_DIR = Path(os.environ.get("AI_DETECTOR_CACHE", Path(__file__).resolve().parents[2] / "data" / "models"))
-HF_CACHE = CACHE_DIR / "hf"  # every Hugging Face download lands here, not in ~/.cache
 SPAI_DIR = CACHE_DIR / "spai"
 SPAI_VERSION = "mever-team/spai@8ff7b3b"
 SPAI_RUNNER = Path(__file__).with_name("spai_runner.py")
@@ -55,7 +54,6 @@ def load_commfor():
     with _lock:
         if _commfor is not None:
             return _commfor
-        import torch
         from huggingface_hub import hf_hub_download
         from safetensors.torch import load_file
         from torchvision import transforms as T
@@ -125,7 +123,13 @@ def _clip_weights_path() -> Path:
     if not zip_path.exists() or zip_path.stat().st_size < 1000:
         urllib.request.urlretrieve(CLIP_WEIGHTS_URL, zip_path)
     with zipfile.ZipFile(zip_path) as zf:
-        names = [n for n in zf.namelist() if n.endswith("clipdet_latent10k_plus/weights.pth") or n.endswith("weights.pth") and "clipdet_latent10k_plus" in n]
+        names = [
+            n
+            for n in zf.namelist()
+            if n.endswith("clipdet_latent10k_plus/weights.pth")
+            or n.endswith("weights.pth")
+            and "clipdet_latent10k_plus" in n
+        ]
         if not names:
             names = [n for n in zf.namelist() if n.endswith("weights.pth")]
         if not names:
@@ -162,7 +166,11 @@ def load_clip():
         state = ckpt.get("model") or ckpt.get("state_dict") or ckpt
         if any(k.startswith("module.") for k in state):
             state = {k.removeprefix("module."): v for k, v in state.items()}
-        head_state = {k.removeprefix("fc."): v for k, v in state.items() if "fc" in k or k.startswith("weight") or k.startswith("bias")}
+        head_state = {
+            k.removeprefix("fc."): v
+            for k, v in state.items()
+            if "fc" in k or k.startswith("weight") or k.startswith("bias")
+        }
         if "weight" not in head_state:
             # keys like fc.weight
             head_state = {k.split(".")[-1]: v for k, v in state.items() if k.endswith("weight") or k.endswith("bias")}
@@ -268,9 +276,7 @@ def domain_issue(image) -> str | None:
     """Why the photo-trained detectors can't judge this image, if they can't. Pure; unit-tested."""
     if image.mode in ("P", "PA", "1"):
         return f"{image.mode}-mode palette image: quantization erased the pixel traces the detectors read"
-    if "transparency" in image.info or (
-        image.mode in ("RGBA", "LA") and image.getchannel("A").getextrema()[0] < 255
-    ):
+    if "transparency" in image.info or (image.mode in ("RGBA", "LA") and image.getchannel("A").getextrema()[0] < 255):
         return "transparent pixels: a cut-out graphic, not a photo-like frame"
     if min(image.size) < MIN_SIDE:
         return f"smallest side {min(image.size)} px < {MIN_SIDE} px"

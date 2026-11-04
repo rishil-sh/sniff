@@ -19,7 +19,7 @@ def _text_pair() -> None:
     # Download only: loading two 3B models just to cache them would need ~13 GB of RAM.
     from huggingface_hub import snapshot_download
 
-    from ai_detector.detectors.image import HF_CACHE
+    from ai_detector import HF_CACHE
     from ai_detector.detectors.text import OBSERVER, PERFORMER
 
     for repo in dict.fromkeys((OBSERVER, PERFORMER)):
@@ -50,7 +50,7 @@ def main() -> None:
         print(f"→ {name}", flush=True)
         try:
             step()
-        except Exception as exc:  # keep going: one unreachable host shouldn't block the other models
+        except Exception as exc:  # noqa: BLE001 - keep going: one unreachable host shouldn't block the other models
             failed.append(name)
             print(f"  ✗ {type(exc).__name__}: {exc}", flush=True)
             continue

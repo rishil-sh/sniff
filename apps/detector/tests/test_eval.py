@@ -22,10 +22,20 @@ def test_platt_recovers_known_slope():
 
 
 def test_fusion_applies_platt():
-    ev = Evidence(id="img.commfor", detector="c", version="0", modality="image", signal="learned",
-                  status="ok", raw_score=-12.9, p_ai=2.4e-6)
+    ev = Evidence(
+        id="img.commfor",
+        detector="c",
+        version="0",
+        modality="image",
+        signal="learned",
+        status="ok",
+        raw_score=-12.9,
+        p_ai=2.4e-6,
+    )
     policy = {"weights": {"img.commfor": 1.0}, "platt": {"img.commfor": {"a": 0.1, "b": 0.0, "set": "t"}}}
-    verdict = fuse(route(text="It was the best of times, it was the worst of times. " * 15), [ev], request_id="x", policy=policy)
+    verdict = fuse(
+        route(text="It was the best of times, it was the worst of times. " * 15), [ev], request_id="x", policy=policy
+    )
     assert abs(verdict.p_ai - 1 / (1 + np.exp(1.29))) < 1e-9
     assert verdict.evidence[0].calibration.set == "t"
 

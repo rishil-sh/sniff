@@ -64,12 +64,17 @@ def normalize_text(text: str) -> tuple[str, dict[str, int]]:
     Returns (clean text, counts). `hidden` = format characters removed (zero-width, bidi, soft hyphen);
     `lookalike` = Cyrillic/Greek letters mapped to Latin inside words that are otherwise Latin.
     """
+
     def is_hidden(i: int) -> bool:
         if unicodedata.category(text[i]) != "Cf":
             return False
         # a zero-width joiner between emoji (👨‍💻, 🏳️‍🌈) is how those emoji are written, not an attack
-        return not (text[i] == "‍" and 0 < i < len(text) - 1
-                    and unicodedata.category(text[i - 1]) in ("So", "Sk", "Mn") and unicodedata.category(text[i + 1]) == "So")
+        return not (
+            text[i] == "‍"
+            and 0 < i < len(text) - 1
+            and unicodedata.category(text[i - 1]) in ("So", "Sk", "Mn")
+            and unicodedata.category(text[i + 1]) == "So"
+        )
 
     drop = {i for i in range(len(text)) if is_hidden(i)}
     hidden = len(drop)
@@ -127,9 +132,7 @@ def sniff(data: bytes, filename: str | None) -> tuple[Modality, str | None]:
         return "audio", "audio/flac"
     if data.startswith(b"OggS"):
         return "audio", "audio/ogg"
-    if data.startswith(b"ID3") or (
-        len(data) >= 2 and data[0] == 0xFF and data[1] in (0xFB, 0xF3, 0xF2, 0xFA)
-    ):
+    if data.startswith(b"ID3") or (len(data) >= 2 and data[0] == 0xFF and data[1] in (0xFB, 0xF3, 0xF2, 0xFA)):
         return "audio", "audio/mpeg"
     if len(data) >= 12 and data[4:8] == b"ftyp":
         brand = data[8:12]
@@ -185,8 +188,9 @@ def probe_duration_s(data: bytes, suffix: str) -> float | None:
         tmp.write(data)
         tmp.flush()
         if not shutil.which("ffprobe"):  # imageio-ffmpeg ships ffmpeg only
-            proc = subprocess.run([ffmpeg_exe(), "-hide_banner", "-i", tmp.name], capture_output=True, text=True,
-                                  timeout=20, check=False)
+            proc = subprocess.run(
+                [ffmpeg_exe(), "-hide_banner", "-i", tmp.name], capture_output=True, text=True, timeout=20, check=False
+            )
             return parse_ffmpeg_duration(proc.stderr)
         proc = subprocess.run(
             [

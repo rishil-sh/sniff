@@ -6,8 +6,8 @@ Weights: OwensLab/commfor-model-384. Instantiated on CPU so Mac/MPS can load.
 
 from __future__ import annotations
 
-import torch.nn as nn
 import timm
+import torch.nn as nn
 
 
 class ViTClassifier(nn.Module):

@@ -130,13 +130,13 @@ def _iptc_source(data: bytes) -> str | None:
         return None
     try:
         image = Image.open(io.BytesIO(data))
-    except Exception:
+    except Exception:  # noqa: BLE001 - untrusted file: any parse failure means no metadata
         return None
     blob = ""
     try:
         xmp = image.getxmp()
         blob = json.dumps(xmp) if xmp else ""
-    except Exception:
+    except Exception:  # noqa: BLE001 - untrusted file: any parse failure means no metadata
         blob = str(image.info.get("XML:com.adobe.xmp") or "")
     if not blob:
         blob = str(image.info.get("XML:com.adobe.xmp") or "")
@@ -195,7 +195,7 @@ def _generator_fields(data: bytes) -> dict[str, str]:
         fields["UserComment"] = str(comment)
     try:
         xmp = json.dumps(image.getxmp() or {})
-    except Exception:
+    except Exception:  # noqa: BLE001 - untrusted file: any parse failure means no metadata
         xmp = str(image.info.get("XML:com.adobe.xmp") or "")
     fields["xmp"] = xmp
     tool = re.search(r'CreatorTool"?\s*[:=>]\s*"?([^"<]+)', xmp)
@@ -211,7 +211,7 @@ def _read_c2pa(data: bytes, mime: str | None) -> tuple[dict | None, str | None]:
     if mime:
         try:
             reader = Reader.try_create(mime, stream)
-        except Exception:
+        except Exception:  # noqa: BLE001 - untrusted file: any parse failure means no metadata
             stream.seek(0)
             reader = None
     if reader is None:
