@@ -163,9 +163,6 @@ def _unchecked_why(verdict: Verdict) -> str:
     if verdict.modality == "image" and any("palette" in (e.details.get("reason") or "") for e in verdict.evidence):
         return ("This picture was saved with a reduced colour palette, which wipes out the traces we look for. "
                 "Please send the original file, or a JPEG or full-colour PNG.")
-    if verdict.modality == "video" and not reason:
-        # shortcut: video detection is a stub (detectors/video.py); replace this line when it lands
-        return "We can't check videos yet. Please send a photo, voice note or text instead."
     return "We couldn't read this file. Please try a different file or format."
 
 

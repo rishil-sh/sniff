@@ -72,12 +72,13 @@ def test_muse_failure_falls_back_to_the_template(monkeypatch):
 
 
 def test_whatsapp_reply_names_the_right_kind_of_ai_per_modality():
-    for modality, words in (("image", "AI image generators"), ("audio", "AI voice generators")):
+    for modality, words in (
+        ("image", "AI image generators"),
+        ("audio", "AI voice generators"),
+        ("video", "AI video generators"),
+    ):
         verdict = _verdict("likely_ai", 0.95).model_copy(update={"modality": modality})
         assert words in muse.explain_verdict(verdict, send_to_muse=False).answer
-    video = Verdict(request_id="r", modality="video", sha256="s", verdict="inconclusive", p_ai=None, evidence=[],
-                    fusion=FusionTrace(policy="t"))
-    assert "can't check videos yet" in muse.explain_verdict(video, send_to_muse=False).answer
 
 
 def test_stub_reasons_are_plain_voting_first():
