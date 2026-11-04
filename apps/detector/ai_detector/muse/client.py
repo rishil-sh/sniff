@@ -62,6 +62,14 @@ synthetic throughout, so only a few hot windows is weaker evidence.
 - aud.dfarena and aud.mambo have weight 0 and often flag real voices: supporting detail only.
 - A `transcript`, if present, is context only. Never judge whether a voice is synthetic from its wording.
 
+Reading video evidence:
+- vid.watermark: a generator's name (such as KlingAI) printed in the corner of the picture, read in several frames. \
+It decides the verdict (declared_ai), like a label the maker put on it.
+- img.genmeta on a video: the file's own metadata names the AI tool that made it (declared_ai).
+- vid.head scores sampled frames with our image detector and is the only score that votes. A high score points to \
+AI; a low one says nothing, because compressed AI videos score as low as real ones. Soundtrack (aud.*) scores are \
+shown but do not vote: music, effects and non-English speech are outside what they were tested on.
+
 Measured on 1,056 held-out texts (2026-11-03): the tool calls 2.4% of human texts "likely AI" (16% of academic \
 abstracts) and catches 95.6% of AI texts; Llama-3.1-8B (62%) and paraphrased AI text (86%) are caught less often. \
 When it says no_ai_signal, 97.8% of texts were human. Only 2.8% of texts were inconclusive, 24 of those 30 human; \
@@ -155,6 +163,8 @@ def lean_for(verdict: Verdict, muse_lean: Lean | None = None) -> Lean:
         return FIXED_LEAN[verdict.verdict]
     if verdict.p_ai is None:
         return "unclear"
+    if verdict.modality == "video" and verdict.p_ai < 0.5:
+        return "unclear"  # re-encoded AI video scores as low as real video (fusion.yaml stackers.video)
     return muse_lean or ("ai" if verdict.p_ai >= 0.5 else "human")
 
 
@@ -316,6 +326,11 @@ def _plain_reasons(verdict: Verdict) -> list[ReportReason]:
             reasons.append(ReportReason(evidence_id=c2pa.id, text=f"Content Credentials from {gen} ({src})."))
         else:
             reasons.append(ReportReason(evidence_id=c2pa.id, text="No C2PA or IPTC metadata in the file."))
+    for e in verdict.evidence:  # a generator's own label decides the verdict: say which one
+        if e.id in ("img.genmeta", "vid.watermark") and e.status == "ok" and e.points_to == "ai":
+            where = "printed on the picture" if e.id == "vid.watermark" else "in the file's metadata"
+            text = f"Generator label {where}: {e.details.get('generator')}."
+            reasons.append(ReportReason(evidence_id=e.id, text=text))
     if tamper := by_id.get("txt.tamper"):
         reasons.append(
             ReportReason(
@@ -328,7 +343,9 @@ def _plain_reasons(verdict: Verdict) -> list[ReportReason]:
         )
     weights = verdict.fusion.weights
 
-    def votes(e) -> bool:  # same rule as fusion.weight_of: unlisted ids vote
+    def votes(e) -> bool:  # same rule as fusion.weight_of: unlisted ids vote, a video's soundtrack never does
+        if verdict.modality == "video" and e.modality == "audio":
+            return False
         w = weights.get(e.id)
         return (w if w is not None else 1.0) > 0
 

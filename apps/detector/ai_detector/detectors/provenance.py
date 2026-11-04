@@ -5,10 +5,12 @@ from __future__ import annotations
 import io
 import json
 import re
+import subprocess
+import tempfile
 import time
 from typing import Any
 
-from ai_detector.router import RoutedInput
+from ai_detector.router import RoutedInput, ffmpeg_exe
 from ai_detector.schemas import Evidence
 
 VERSION = "c2pa-python@0.38.2"
@@ -172,6 +174,13 @@ def generator_signature(fields: dict[str, str]) -> str | None:
         return "ComfyUI workflow"
     if {"sd-metadata", "invokeai_metadata", "Dream"} & fields.keys():
         return "InvokeAI metadata"
+    try:
+        aigc = json.loads(fields.get("AIGC") or "{}")
+    except ValueError:
+        aigc = {}
+    # China's AIGC implicit label (GB 45438-2025), written by Kling, Jimeng, Hailuo...: Label 1 = AI-generated
+    if isinstance(aigc, dict) and str(aigc.get("Label")) == "1":
+        return f"AIGC label ({aigc.get('ContentProducer') or 'unknown producer'})"
     if "fooocus_scheme" in fields:
         return "Fooocus metadata"
     if "made with google ai" in fields.get("xmp", "").lower():
@@ -201,6 +210,20 @@ def _generator_fields(data: bytes) -> dict[str, str]:
     tool = re.search(r'CreatorTool"?\s*[:=>]\s*"?([^"<]+)', xmp)
     fields["CreatorTool"] = tool.group(1) if tool else ""
     return fields
+
+
+def _video_fields(data: bytes) -> dict[str, str]:
+    """Container tags (mp4 udta/meta) as key -> value, via ffmpeg's ffmetadata dump."""
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as tmp:
+        tmp.write(data)
+        tmp.flush()
+        out = subprocess.run(
+            [ffmpeg_exe(), "-v", "error", "-i", tmp.name, "-f", "ffmetadata", "-"],
+            capture_output=True, text=True, timeout=20, check=True,
+        ).stdout
+    pairs = (line.partition("=") for line in out.splitlines() if not line.startswith(";"))
+    # ffmetadata backslash-escapes = ; # \ in values
+    return {k: re.sub(r"\\(.)", r"\1", v) for k, sep, v in pairs if sep}
 
 
 def _read_c2pa(data: bytes, mime: str | None) -> tuple[dict | None, str | None]:
@@ -266,23 +289,24 @@ async def collect(routed: RoutedInput) -> list[Evidence]:
             latency_ms=int((time.perf_counter() - started) * 1000),
         )
     ]
-    if routed.modality == "image":
-        items.append(_genmeta(routed.data))
+    if routed.modality in ("image", "video"):
+        items.append(_genmeta(routed.data, routed.modality))
     return items
 
 
-def _genmeta(data: bytes) -> Evidence:
+def _genmeta(data: bytes, modality: str = "image") -> Evidence:
     started = time.perf_counter()
     try:
-        generator = generator_signature(_generator_fields(data))
+        fields = _video_fields(data) if modality == "video" else _generator_fields(data)
+        generator = generator_signature(fields)
         status, details = "ok", {"generator": generator}
     except Exception as exc:  # noqa: BLE001
         generator, status, details = None, "error", {"error": str(exc)}
     return Evidence(
         id="img.genmeta",
         detector="generator-metadata",
-        version="0.1.0",
-        modality="image",
+        version="0.2.0",
+        modality=modality,  # type: ignore[arg-type]
         signal="provenance",
         status=status,  # type: ignore[arg-type]
         points_to="ai" if generator else "none",

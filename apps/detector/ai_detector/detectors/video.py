@@ -5,10 +5,14 @@ from __future__ import annotations
 import io
 import math
 import os
+import re
 import subprocess
 import tempfile
 import time
+from functools import lru_cache
 from pathlib import Path
+
+import numpy as np
 
 from ai_detector.detectors import audio as audio_mod
 from ai_detector.detectors.image import HEAD_VERSION, score_head
@@ -18,6 +22,13 @@ from ai_detector.schemas import Calibration, Evidence
 N_FRAMES = 16
 EDGE_SKIP_S = 0.5
 FFMPEG = ffmpeg_exe()
+# Every sampled frame is read (~2.5 s for 16 at 848p, ~6 s at 4K, CPU): on 848p re-encodes the mark reads
+# in only 7-10 of 16 frames. One frame of scene text saying "KlingAI" is not enough.
+MIN_MARK_FRAMES = 2
+# Visible marks that generators burn into output. OCR reads of Kling 3.0/4.0, originals and 848p re-encodes:
+# "KlingAI 3.0", "KingAl3.0", "KlngAI40", "KIingAI", "OKlingAI3.04K" (the logo read as O).
+# shortcut: Kling only (the generator we have samples of); add Hailuo, Vidu, PixVerse... once a sample is checked
+VISIBLE_MARKS = {"Kling AI": re.compile(r"(?<![a-z])o?k[l1i]{0,2}nga[il1](?![a-z])|可灵")}
 
 
 def frame_times(duration_s: float, n: int = N_FRAMES, edge: float = EDGE_SKIP_S) -> list[float]:
@@ -33,6 +44,51 @@ def frame_times(duration_s: float, n: int = N_FRAMES, edge: float = EDGE_SKIP_S)
 
 def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
+
+
+def find_visible_mark(texts_per_frame: list[list[str]]) -> tuple[str | None, int]:
+    """(generator, frames it was read in) for the mark seen in >= MIN_MARK_FRAMES frames. Pure; unit-tested."""
+    best: tuple[str | None, int] = (None, 0)
+    for name, pattern in VISIBLE_MARKS.items():
+        hits = sum(any(pattern.search(text.lower()) for text in texts) for texts in texts_per_frame)
+        if hits > best[1]:
+            best = (name, hits)
+    return best if best[1] >= MIN_MARK_FRAMES else (None, best[1])
+
+
+@lru_cache(maxsize=1)
+def _ocr():
+    from rapidocr_onnxruntime import RapidOCR
+
+    return RapidOCR()
+
+
+def read_text(image) -> list[str]:
+    result, _ = _ocr()(np.asarray(image)[:, :, ::-1])  # RapidOCR expects BGR
+    return [row[1] for row in result or []]
+
+
+def _mark_evidence(frames: list[tuple[float, object]]) -> Evidence:
+    started = time.perf_counter()
+    base = {"id": "vid.watermark", "detector": "rapidocr-visible-mark", "version": "rapidocr-onnxruntime@1.4.4",
+            "modality": "video", "signal": "watermark"}
+    try:
+        texts = [read_text(image) for _, image in frames]
+        generator, hits = find_visible_mark(texts)
+        details = {
+            "scheme": "visible mark (OCR)",
+            "detected": generator is not None,
+            "generator": generator,
+            "frames_read": len(frames),
+            "frames_with_mark": hits,
+            "text": [t for frame in texts for t in frame][:12],
+            "note": "Reads only generator names burned into the picture. Cropped or paid-tier videos have none.",
+        }
+        return Evidence(**base, status="ok", points_to="ai" if generator else "none", details=details,
+                        latency_ms=int((time.perf_counter() - started) * 1000))
+    except Exception as exc:  # noqa: BLE001
+        return Evidence(**base, status="error", details={"error": str(exc)},
+                        latency_ms=int((time.perf_counter() - started) * 1000))
 
 
 def extract_frames(data: bytes, times: list[float]) -> list[tuple[float, object]]:
@@ -106,8 +162,10 @@ def extract_soundtrack(data: bytes) -> bytes | None:
     return out.stdout or None
 
 
-def _frames_evidence(data: bytes, duration_s: float | None) -> Evidence:
+def _frames_evidence(data: bytes, duration_s: float | None) -> tuple[list[tuple[float, object]], Evidence]:
+    """(frames, vid.head evidence); frames are reused for the visible-mark OCR, empty if extraction failed."""
     started = time.perf_counter()
+    frames: list[tuple[float, object]] = []
     base = {
         "id": "vid.head",
         "detector": "commfor-screenshot-head",
@@ -130,7 +188,7 @@ def _frames_evidence(data: bytes, duration_s: float | None) -> Evidence:
             timeline.append({"t": t, "p_ai": round(p_ai, 4)})
         agg = audio_mod.aggregate(logits)
         p_ai = _sigmoid(agg["median"])
-        return Evidence(
+        return frames, Evidence(
             **base,
             status="ok",
             raw_score=agg["median"],
@@ -146,7 +204,7 @@ def _frames_evidence(data: bytes, duration_s: float | None) -> Evidence:
             latency_ms=int((time.perf_counter() - started) * 1000),
         )
     except Exception as exc:  # noqa: BLE001
-        return Evidence(
+        return frames, Evidence(
             **base,
             status="error",
             details={"error": str(exc)},
@@ -160,7 +218,10 @@ async def collect(routed: RoutedInput) -> list[Evidence]:
     if os.environ.get("AI_DETECTOR_SKIP_ML"):
         return []
 
-    items = [_frames_evidence(routed.data, routed.duration_s)]
+    frames, head = _frames_evidence(routed.data, routed.duration_s)
+    items = [head]
+    if frames:
+        items.append(_mark_evidence(frames))
 
     wav = extract_soundtrack(routed.data)
     if wav:
@@ -177,5 +238,8 @@ async def collect(routed: RoutedInput) -> list[Evidence]:
             sha256=routed.sha256,
             data=wav,
         )
-        items.extend(await audio_mod.collect(audio_routed))
+        soundtrack = await audio_mod.collect(audio_routed)
+        for e in soundtrack:
+            e.weight = 0.0  # fusion ignores soundtrack scores on video; show the weight that was applied
+        items.extend(soundtrack)
     return items

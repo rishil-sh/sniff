@@ -75,6 +75,7 @@ def test_collect_vid_head_with_mocked_scorer(monkeypatch):
     mp4 = _tiny_mp4(3.0)
     monkeypatch.setattr(video_mod, "score_head", lambda image: (2.0, 0.88))
     monkeypatch.setattr(video_mod, "extract_soundtrack", lambda data: None)
+    monkeypatch.setattr(video_mod, "read_text", lambda image: [])
     routed = _routed(mp4)
     routed.duration_s = 3.0
 
@@ -104,12 +105,12 @@ def test_vid_head_votes_in_fusion():
         )
     ]
     verdict = fuse(_routed(), evidence, request_id="v")
-    assert verdict.modality == "video" and verdict.p_ai == 0.95
+    assert verdict.modality == "video" and abs(verdict.p_ai - 0.9526) < 1e-3  # sigmoid(raw_score)
     assert verdict.verdict == "likely_ai"
 
 
-def test_soundtrack_aud_votes_on_video():
-    """aud.* ids keep fusion.yaml weights when modality is video (no audio stacker)."""
+def test_soundtrack_does_not_vote_on_video():
+    """Soundtrack scores are shown on a video but only vid.head votes (fusion.py weight_of)."""
     evidence = [
         Evidence(
             id="vid.head",
@@ -118,7 +119,8 @@ def test_soundtrack_aud_votes_on_video():
             modality="video",
             signal="learned",
             status="ok",
-            p_ai=0.2,  # outside chance_band so it votes
+            raw_score=-1.3863,
+            p_ai=0.2,
             weight=1.0,
         ),
         Evidence(
@@ -133,5 +135,32 @@ def test_soundtrack_aud_votes_on_video():
         ),
     ]
     verdict = fuse(_routed(), evidence, request_id="v")
-    assert verdict.p_ai is not None
-    assert abs(verdict.p_ai - (0.2 + 0.99) / 2) < 1e-6
+    assert abs(verdict.p_ai - 0.2) < 1e-3
+    # re-encoded Kling clips score 0.13-0.34 too: a low frame score never clears a video
+    assert verdict.verdict == "inconclusive"
+
+
+def test_find_visible_mark_tolerates_ocr_misreads():
+    # OCR output read from real Kling 3.0/4.0 frames, originals and 848p re-encodes
+    frames = [[" KingAI 3.0"], ["my mona", "KlingAl 4.0"], ["KlingAI3.04K"], ["KlngAI40"], ["OKIingAI3.04K"], []]
+    assert video_mod.find_visible_mark(frames) == ("Kling AI", 5)
+
+
+def test_find_visible_mark_needs_two_frames_and_whole_words():
+    assert video_mod.find_visible_mark([["KlingAI 3.0"], ["sunset"]]) == (None, 1)  # one frame of scene text
+    # OCR text read from real (non-AI) clips, plus near-miss words
+    real = [["PrizePool", "18400"], ["Water saved:O Liters", "HELLO"], ["making a list"], ["the King Al"], ["kingdom"]]
+    assert video_mod.find_visible_mark(real) == (None, 0)
+
+
+def test_visible_mark_decides_video(monkeypatch):
+    monkeypatch.delenv("AI_DETECTOR_SKIP_ML", raising=False)
+    monkeypatch.setattr(video_mod, "score_head", lambda image: (0.3, 0.57))
+    monkeypatch.setattr(video_mod, "extract_soundtrack", lambda data: None)
+    monkeypatch.setattr(video_mod, "read_text", lambda image: ["KlingAI 3.0"])
+    routed = _routed(_tiny_mp4(3.0))
+    routed.duration_s = 3.0
+    items = asyncio.run(video_mod.collect(routed))
+    mark = next(e for e in items if e.id == "vid.watermark")
+    assert mark.points_to == "ai" and mark.details["frames_read"] == video_mod.N_FRAMES
+    assert fuse(routed, items, request_id="v").verdict == "declared_ai"

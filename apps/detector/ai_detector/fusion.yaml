@@ -30,7 +30,8 @@ weights:
   aud.w2vbert: 1.0
   aud.dfarena: 0.0
   aud.mambo: 0.0
-  # Video: frame-aggregated image head (detectors/video.py). Soundtrack evidence uses aud.* weights above.
+  # Video: frame-aggregated image head (detectors/video.py). Soundtrack aud.* scores are shown but never vote on a
+  # video (fusion.py weight_of): music, effects and non-English speech are outside the probe's English-speech set.
   vid.head: 1
 # Per-detector Platt fits from scripts/eval_images.py. Empty = raw sigmoids.
 # Fit on all of eval_v2; held-out fold fits (tune_fusion.py) land within a=0.40-0.45, b=2.3-2.7.
@@ -131,3 +132,11 @@ stackers:
     bands: { no_ai_signal_below: 0.4193, likely_ai_above: 0.8954 }
     target_fpr: 0.01
     set: probe_train-610-logo
+  # Video: pass-through of vid.head with its own bands. Measured 2026-11-04 on 4 Kling clips and 4 real clips:
+  # Kling originals 0.58-0.82, the same clips re-encoded to 360-480p 0.13-0.34, real clips 0.31-0.46. A low frame
+  # score is no evidence of a real video, so the head can say likely_ai but never no_ai_signal on a video.
+  video:
+    intercept: 0.0
+    coef: {vid.head: 1.0}
+    bands: {no_ai_signal_below: 0.0, likely_ai_above: 0.85}
+    set: kling-4+real-4 (2026-11-04)

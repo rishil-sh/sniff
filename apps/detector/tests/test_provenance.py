@@ -134,3 +134,12 @@ def test_generator_signature_rules():
     assert generator_signature({"CreatorTool": "Adobe Firefly"}) == "firefly"
     assert generator_signature({"Software": "Adobe Photoshop 25.0", "parameters": "no steps here"}) is None
     assert generator_signature({"Description": "painted in the style of midjourney"}) is None
+
+
+def test_generator_signature_aigc_label():
+    from ai_detector.detectors.provenance import generator_signature
+
+    kling = '{"Label":"1","ContentProducer":"kling","ProduceID":"x"}'
+    assert generator_signature({"AIGC": kling}) == "AIGC label (kling)"
+    assert generator_signature({"AIGC": '{"Label":"3","ContentProducer":"x"}'}) is None  # 3 = only suspected
+    assert generator_signature({"AIGC": "not json"}) is None

@@ -75,6 +75,10 @@ def fuse(
     capture = [e for e in evidence if e.status == "ok" and e.signal == "provenance" and e.points_to == "real"]
 
     def weight_of(e: Evidence) -> float:
+        # A video soundtrack is usually music, effects or non-English speech: the speech probe is measured on clean
+        # English speech only (docs/audio-detection.md) and called Kling's music track "real" (0.06). Shown, no vote.
+        if routed.modality == "video" and e.modality == "audio":
+            return 0.0
         w = weights.get(e.id)
         return (e.weight if e.weight > 0 else 1.0) if w is None else w
 

@@ -29,6 +29,7 @@ dependencies = [
   "torchaudio>=2.11.1",
   "audioseal>=0.1.4",
   "imageio-ffmpeg>=0.5",
+  "rapidocr-onnxruntime>=1.4.4",
 ]
 
 [project.optional-dependencies]
