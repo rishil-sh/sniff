@@ -1,21 +1,37 @@
-# Sniff 🐕
+![Sniff: Forward anything. Sniff checks if it's real.](docs/brand/banner.png)
 
-**Forward anything. Sniff checks if it's real.**
+<p align="center">
+  Open-source AI detection for <strong>text, images, voice and video</strong>, on the web and on WhatsApp.
+</p>
 
-Sniff is an open-source suite of AI-content detectors for **text, images, voice and video**. Send it a paragraph, a photo, a voice note or a clip, on the web or over WhatsApp, and it answers in plain words, shows the evidence behind the answer, and says "can't tell" when it honestly can't.
+<p align="center">
+  <a href="#quick-start-docker">Quick start</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#whatsapp">WhatsApp</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
+
+Send Sniff a paragraph, a photo, a voice note or a clip. It answers in plain words, shows the evidence behind the answer, and says "can't tell" when it honestly can't.
 
 > Verdicts are automated estimates, not proof. Please don't use them as the only evidence against anyone.
 
 ## Meet Sherlock
 
-Sniff's mascot is **Sherlock**, a beagle in a detective cap. Beagles are real detection dogs (airports use them), and Sherlock doesn't guess: when he isn't sure, he tilts his head. Every check ends in one of four verdicts:
+Sniff's mascot is **Sherlock**, a beagle in a detective cap. Beagles are real detection dogs (airports use them), and Sherlock doesn't guess: when he isn't sure, he tilts his head. Every check ends in one of four verdicts, and Sherlock wears a face for each one, in the app and in every reply.
 
-|  | Verdict | Meaning |
-| --- | --- | --- |
-| 🏷️ | **Declared AI** | The file carries its own AI label: Content Credentials (C2PA), an invisible watermark or generator metadata. |
-| 🐕‍🦺 | **Likely AI** | The detectors agree it was made by AI. |
-| 🤔 | **Inconclusive** | The signals are mixed or weak, so Sniff gives a best guess and says so. |
-| 😌 | **No AI signal found** | Nothing points to AI. This is not a guarantee that a human made it. |
+| <img src="apps/web/public/brand/pose-likely-ai.png" alt="Sherlock pointing" height="150" /> | <img src="apps/web/public/brand/pose-inconclusive.png" alt="Sherlock tilting his head" height="150" /> | <img src="apps/web/public/brand/pose-no-ai-signal.png" alt="Sherlock wagging his tail" height="150" /> | <img src="apps/web/public/brand/pose-declared-ai.png" alt="Sherlock holding an AI label" height="150" /> |
+| :-: | :-: | :-: | :-: |
+| **Likely AI** | **Inconclusive** | **No AI signal found** | **Declared AI** |
+| The detectors agree AI made it. | The signals are mixed or weak. Sniff gives its best guess and says so. | Nothing points to AI. This isn't a guarantee that a human made it. | The file carries its own AI label: Content Credentials (C2PA), an invisible watermark or generator metadata. |
+
+He has a few more moves: sniffing while a check runs, a camera when a photo carries proof it's a real capture, and a sad sit when he loses the scent.
+
+<p align="center">
+  <img src="apps/web/public/brand/pose-sniffing.png" alt="Sherlock sniffing with a magnifying glass" height="120" />
+  <img src="apps/web/public/brand/pose-real-capture.png" alt="Sherlock holding a camera" height="120" />
+  <img src="apps/web/public/brand/pose-lost-scent.png" alt="Sherlock lost the scent" height="120" />
+</p>
 
 ## Why Sniff
 
@@ -106,6 +122,8 @@ Locally the Llama text pair is **on** by default (~13 GB download and RAM). Set 
 | `pnpm test` | Detector (pytest) and server (bun) tests. The tests stub the models, so no downloads. |
 | `pnpm db:generate` / `pnpm db:migrate` | Create a migration from the schema / apply migrations |
 | `pnpm db:studio` | Browse the database |
+
+Brand assets live in [docs/brand](docs/brand) (the brand board, sticker set, banner and WhatsApp profile picture) and [apps/web/public/brand](apps/web/public/brand) (Sherlock's poses and faces, and the app icons).
 
 Local files that git ignores: `.data/` (SQLite databases) and `apps/detector/data/` (models and eval sets).
 

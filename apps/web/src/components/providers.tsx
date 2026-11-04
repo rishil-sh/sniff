@@ -12,7 +12,7 @@ import { ThemeProvider } from "./theme-provider";
 const Providers = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider
     attribute="class"
-    defaultTheme="dark"
+    defaultTheme="system"
     enableSystem
     disableTransitionOnChange
   >

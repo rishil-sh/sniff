@@ -15,14 +15,19 @@ const sourceCodePro = Source_Code_Pro({
 export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Sniff" },
   description:
-    "Is this AI? Check images, voice notes and text on the web or on WhatsApp.",
-  title: { default: "Sniff", template: "%s · Sniff" },
+    "Forward anything. Sniff checks if it's real: AI detection for photos, voice notes, videos and text, on the web or on WhatsApp.",
+  openGraph: {
+    description: "Forward anything. Sniff checks if it's real.",
+    siteName: "Sniff",
+    title: "Sniff",
+  },
+  title: { default: "Sniff: is this AI?", template: "%s · Sniff" },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { color: "#ffffff", media: "(prefers-color-scheme: light)" },
-    { color: "#1c1c1c", media: "(prefers-color-scheme: dark)" },
+    { color: "#fdf7f2", media: "(prefers-color-scheme: light)" },
+    { color: "#1a1718", media: "(prefers-color-scheme: dark)" },
   ],
 };
 

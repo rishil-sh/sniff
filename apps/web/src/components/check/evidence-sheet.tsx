@@ -19,7 +19,7 @@ import {
 
 import { WhatsAppText } from "@/components/chat/whatsapp-text";
 
-import { VerdictBadge } from "./verdict-badge";
+import { MOODS, moodOf, SherlockPose, VerdictBadge } from "./verdict-badge";
 
 const percent = (value: number | null) =>
   value === null ? "—" : `${Math.round(value * 100)}%`;
@@ -85,6 +85,16 @@ export const EvidenceSheet = ({
       {verdict && (
         <>
           <SheetHeader>
+            <div
+              className={`mb-2 flex w-32 justify-center rounded-xl pt-2 ${MOODS[moodOf(verdict.verdict)].className}`}
+            >
+              <SherlockPose
+                className="h-24 w-auto"
+                height={300}
+                pose={moodOf(verdict.verdict)}
+                width={290}
+              />
+            </div>
             <SheetTitle>
               <span className="flex items-center gap-2">
                 <VerdictBadge pAi={verdict.p_ai} verdict={verdict.verdict} />

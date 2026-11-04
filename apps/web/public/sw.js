@@ -1,5 +1,5 @@
 // Bump this version when changing offline.html so installed apps refresh it.
-const CACHE_NAME = "sniff-offline-v1";
+const CACHE_NAME = "sniff-offline-v3";
 const OFFLINE_URL = "/offline.html";
 
 const install = async () => {

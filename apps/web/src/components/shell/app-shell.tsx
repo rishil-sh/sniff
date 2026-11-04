@@ -18,7 +18,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Logo } from "./logo";
+import { Wordmark } from "./logo";
 import { NavUser } from "./nav-user";
 
 const NAV = [
@@ -75,12 +75,8 @@ export const AppShell = ({
     >
       <header className="bg-sidebar sticky top-0 z-20 flex h-(--header-height) w-full shrink-0 items-center gap-2 border-b px-3">
         <SidebarTrigger className="md:hidden" />
-        <Link
-          className="font-heading flex items-center gap-2 px-1 font-semibold"
-          href="/"
-        >
-          <Logo />
-          Sniff
+        <Link aria-label="Sniff home" className="px-1" href="/">
+          <Wordmark />
         </Link>
         {active && (
           <>

@@ -25,7 +25,7 @@ import {
   InputGroupButton,
   InputGroupTextarea,
 } from "@sniff/ui/components/input-group";
-import { Message } from "@sniff/ui/components/message";
+import { Message, MessageAvatar } from "@sniff/ui/components/message";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -34,15 +34,8 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@sniff/ui/components/message-scroller";
-import { Spinner } from "@sniff/ui/components/spinner";
 import { useMutation } from "@tanstack/react-query";
-import {
-  FileIcon,
-  PaperclipIcon,
-  ScanSearchIcon,
-  SendIcon,
-  XIcon,
-} from "lucide-react";
+import { FileIcon, PaperclipIcon, SendIcon, XIcon } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 
@@ -50,7 +43,14 @@ import { WhatsAppText } from "@/components/chat/whatsapp-text";
 import { orpc } from "@/utils/orpc";
 
 import { EvidenceSheet } from "./evidence-sheet";
-import { VerdictBadge } from "./verdict-badge";
+import {
+  MOOD_ORDER,
+  MOODS,
+  moodOf,
+  SherlockFace,
+  SherlockPose,
+  VerdictBadge,
+} from "./verdict-badge";
 
 const ACCEPT = "image/*,audio/*,video/mp4,.txt";
 
@@ -142,7 +142,7 @@ export const CheckChat = () => {
 
   return (
     <div
-      className="bg-wa-wallpaper data-[dragging=true]:ring-primary relative flex h-[calc(100svh-var(--header-height))] flex-col data-[dragging=true]:ring-2 data-[dragging=true]:ring-inset"
+      className="bg-background data-[dragging=true]:ring-primary relative flex h-[calc(100svh-var(--header-height))] flex-col data-[dragging=true]:ring-2 data-[dragging=true]:ring-inset"
       data-dragging={dragging}
       data-slot="product-layout"
       onDragLeave={() => setDragging(false)}
@@ -158,17 +158,39 @@ export const CheckChat = () => {
     >
       {turns.length === 0 ? (
         <Empty className="flex-1">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <ScanSearchIcon />
+          <EmptyHeader className="max-w-md">
+            <EmptyMedia>
+              <Image
+                alt="Sherlock, Sniff's beagle detective"
+                className="size-32 drop-shadow-md"
+                height={128}
+                priority
+                src="/brand/sherlock.png"
+                width={128}
+              />
             </EmptyMedia>
             <EmptyTitle>Is this AI?</EmptyTitle>
             <EmptyDescription>
               Drop in a photo, a voice note or a video, or paste a paragraph of
-              English text (about 110 words or more). You can also send them to
-              Sniff on WhatsApp.
+              English text (about 110 words or more). Sherlock sniffs it and
+              shows you the evidence. You can also forward things to Sniff on
+              WhatsApp.
             </EmptyDescription>
           </EmptyHeader>
+          <ul
+            aria-label="Possible answers"
+            className="flex flex-wrap justify-center gap-2"
+          >
+            {MOOD_ORDER.map((mood) => (
+              <li
+                className={`flex items-center gap-1 rounded-full py-0.5 pr-3 pl-1 text-xs font-semibold ${MOODS[mood].className}`}
+                key={mood}
+              >
+                <SherlockFace className="size-6" mood={mood} size={24} />
+                {MOODS[mood].label}
+              </li>
+            ))}
+          </ul>
         </Empty>
       ) : (
         <MessageScrollerProvider autoScroll>
@@ -200,13 +222,34 @@ export const CheckChat = () => {
                         </Bubble>
                       </Message>
                       <Message>
+                        <MessageAvatar>
+                          {turn.result ? (
+                            <SherlockFace
+                              className="size-8"
+                              mood={moodOf(turn.result.verdict?.verdict)}
+                            />
+                          ) : (
+                            <SherlockPose
+                              className="size-8"
+                              height={32}
+                              pose={turn.error ? "lost-scent" : "sniffing"}
+                              width={32}
+                            />
+                          )}
+                        </MessageAvatar>
                         <Bubble
                           variant={turn.error ? "destructive" : "incoming"}
                         >
                           <BubbleContent>
                             {!(turn.result || turn.error) && (
                               <span className="text-muted-foreground flex items-center gap-2">
-                                <Spinner /> Checking…
+                                <SherlockPose
+                                  className="h-6 w-auto motion-safe:animate-pulse"
+                                  height={24}
+                                  pose="sniffing"
+                                  width={40}
+                                />
+                                Sherlock is sniffing…
                               </span>
                             )}
                             {turn.error && <span>{turn.error}</span>}

@@ -17,14 +17,14 @@ import {
   TableRow,
 } from "@sniff/ui/components/table";
 import { useQuery } from "@tanstack/react-query";
-import { GlobeIcon, HistoryIcon, MessageCircleIcon } from "lucide-react";
+import { GlobeIcon, MessageCircleIcon } from "lucide-react";
 import { useState } from "react";
 
 import { formatDateTime } from "@/lib/format";
 import { orpc } from "@/utils/orpc";
 
 import { EvidenceSheet } from "./evidence-sheet";
-import { VerdictBadge } from "./verdict-badge";
+import { SherlockPose, VerdictBadge } from "./verdict-badge";
 
 const SKELETON_ROWS = ["a", "b", "c", "d"];
 
@@ -52,8 +52,13 @@ export const History = () => {
     return (
       <Empty>
         <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <HistoryIcon />
+          <EmptyMedia>
+            <SherlockPose
+              className="h-20 w-auto"
+              height={80}
+              pose="sniffing"
+              width={132}
+            />
           </EmptyMedia>
           <EmptyTitle>No checks yet</EmptyTitle>
           <EmptyDescription>
