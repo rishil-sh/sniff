@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="#try-it">Try it</a> ·
   <a href="#quick-start-docker">Quick start</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#whatsapp">WhatsApp</a> ·
@@ -13,6 +14,11 @@
 </p>
 
 Send Sniff a paragraph, a photo, a voice note or a clip. It answers in plain words, shows the evidence behind the answer, and says "can't tell" when it honestly can't.
+
+## Try it
+
+- **WhatsApp:** message **+91 99254 85601** ([open chat](https://wa.me/919925485601)). No sign-up. Forward a photo, a voice note, a short video or a paragraph of English text (about 110 words or more).
+- **Web:** [sniff.brewlogic.tech](https://sniff.brewlogic.tech). Create an account, then drop in a file or paste text.
 
 > Verdicts are automated estimates, not proof. Please don't use them as the only evidence against anyone.
 
