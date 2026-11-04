@@ -1,43 +1,40 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Manrope, Source_Code_Pro } from "next/font/google";
 
 import "../index.css";
-import Header from "@/components/header";
 import Providers from "@/components/providers";
 import PwaRegistration from "@/components/pwa-registration";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
+const sourceCodePro = Source_Code_Pro({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-source-code-pro",
 });
 
 export const metadata: Metadata = {
-  title: "sniff",
-  description: "sniff",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Sniff" },
+  description:
+    "Is this AI? Check images, voice notes and text on the web or on WhatsApp.",
+  title: { default: "Sniff", template: "%s · Sniff" },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <PwaRegistration />
+export const viewport: Viewport = {
+  themeColor: [
+    { color: "#ffffff", media: "(prefers-color-scheme: light)" },
+    { color: "#1c1c1c", media: "(prefers-color-scheme: dark)" },
+  ],
+};
 
-        <Providers>
-          <div className="grid grid-rows-[auto_1fr] h-svh">
-            <Header />
-            {children}
-          </div>
-        </Providers>
-      </body>
-    </html>
-  );
-}
+const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => (
+  <html lang="en" suppressHydrationWarning>
+    <body
+      className={`${inter.variable} ${manrope.variable} ${sourceCodePro.variable} antialiased`}
+    >
+      <PwaRegistration />
+      <Providers>{children}</Providers>
+    </body>
+  </html>
+);
+
+export default RootLayout;

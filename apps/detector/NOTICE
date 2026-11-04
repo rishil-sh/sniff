@@ -1,0 +1,65 @@
+AI Content Detector
+Copyright 2026 the contributors
+
+This product is independent research software. Verdicts are calibrated
+probabilities with an inconclusive band, not proof that content is authentic
+or AI-generated.
+
+Third-party notices
+-------------------
+Llama 3.1 / 3.2 (text detector): Built with Llama.
+See the Llama 3.1 Community License at
+https://dev.meta.ai/llama/llama3_1/license/
+
+Text scores reimplement Binoculars (Hans et al., ICML 2024; reference code
+BSD-3), Fast-DetectGPT (Bao et al., ICLR 2024; reference code MIT) and GLTR
+(Gehrmann et al., ACL 2019; reference code Apache-2.0). None of their code is vendored.
+
+Text eval data (scripts/fetch_text_eval.py; downloaded locally, never bundled):
+  PAN'25 Voight-Kampff training data (Zenodo 14962653): copyrighted, research
+    use only, no redistribution.
+  ELLIPSE corpus: CC BY 4.0. Liang et al. ChatGPT-Detector-Bias data: MIT.
+
+Text classifiers (weights downloaded at runtime, not bundled):
+  fakespot-ai/roberta-base-ai-text-detection-v1: Apache-2.0 (Mozilla/Fakespot).
+    clean_text() in ai_detector/detectors/text.py is copied from that repo's
+    utils.py (Apache-2.0), unmodified apart from formatting.
+  desklib/ai-text-detector-v1.01: MIT (Desklib); base model DeBERTa-v3-large, MIT.
+
+Muse Spark, Muse Image, and Muse Voice Transcribe are accessed through the
+Meta Model API and are subject to Meta's API terms.
+
+Community Forensics ViT-S (OwensLab/commfor-model-384): MIT.
+See https://github.com/JeongsooP/Community-Forensics
+
+CLIP-based detector (Cozzolino et al., clipdet_latent10k_plus): Apache-2.0.
+See https://github.com/grip-unina/ClipBased-SyntheticImageDetection
+CLIP backbone: laion/CLIP-ViT-L-14-CommonPool.XL-s13B-b90K
+
+XLSR-MamBo (Ng et al., ACL 2026 Findings; SpeechAntiSpoofingBenchmarks/XLSR-MamBo): MIT.
+See https://github.com/saki-ciallo/XLSR-MamBo. Vendored mamba_ssm subset: Apache-2.0.
+
+DF Arena 500M (Speech-Arena-2025/DF_Arena_500M_V_1): NON-COMMERCIAL license.
+Original contributions are licensed for research and non-commercial use only;
+commercial use needs a separate license from its authors. Downloaded at runtime,
+not redistributed here. Drop aud.dfarena for any commercial deployment.
+
+AudioSeal (facebookresearch/audioseal): MIT, code and weights.
+
+w2v-BERT 2.0 (facebook/w2v-bert-2.0): MIT. Downloaded at runtime.
+
+w2v-BERT speech probe (ai_detector/weights/w2vbert_probe.npz): a linear layer trained on
+frozen w2v-BERT features of:
+  - ElevenLabs v4 voice acting, laion/elevenlabs-v4-five-language-voice-acting (CC BY 4.0, LAION)
+  - gpt-4o-mini-tts clips, LALM-emotional-damage/gpt-4o-mini-tts (MIT)
+  - Common Voice 17 English (CC0, Mozilla), via fixie-ai/common_voice_17_0
+  - LibriSpeech train-clean-100 and train-other-500 (CC BY 4.0, Panayotov et al.)
+  - ElevenLabs speech generated with our own API key (flash_v2_5, v4_turbo)
+  - speech we generated with MMS-TTS (CC BY-NC 4.0 model), Piper voices (per-voice licences),
+    and macOS system voices (Apple licence terms).
+Because some training audio came from non-commercial or restricted generators, treat the probe
+weights as research / non-commercial, like the rest of the audio path.
+
+c2pa-python: MIT OR Apache-2.0. https://github.com/contentauth/c2pa-python
+
+Non-commercial evaluation assets are not bundled with the default install.

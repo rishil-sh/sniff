@@ -2,7 +2,11 @@ import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import type { AppRouterClient } from "@sniff/api/routers/index";
-import { environmentManager, QueryCache, QueryClient } from "@tanstack/react-query";
+import {
+  environmentManager,
+  QueryCache,
+  QueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function createQueryClient() {
@@ -34,7 +38,6 @@ export function getQueryClient() {
 }
 
 export const link = new RPCLink({
-  url: `${process.env.NEXT_PUBLIC_SERVER_URL!.replace(/\/$/, "")}/rpc`,
   fetch(url, options) {
     return fetch(url, {
       ...options,
@@ -49,6 +52,7 @@ export const link = new RPCLink({
     const { headers } = await import("next/headers");
     return Object.fromEntries(await headers());
   },
+  url: `${process.env.NEXT_PUBLIC_SERVER_URL!.replace(/\/$/, "")}/rpc`,
 });
 
 export const client: AppRouterClient = createORPCClient(link);

@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@shadcn/lint": "^0.2.5",
     "@sniff/config": "workspace:*",
     "@types/bun": "catalog:",
     "lefthook": "latest",

@@ -1,0 +1,8 @@
+{
+  "name": "detector",
+  "private": true,
+  "scripts": {
+    "dev": "uv run ai-detector",
+    "test": "uv run pytest"
+  }
+}

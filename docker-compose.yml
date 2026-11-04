@@ -16,6 +16,10 @@ services:
         required: false
     environment:
       DATABASE_URL: file:/data/local.db
+      MASTRA_DATABASE_URL: file:/data/mastra.db
+      DETECTOR_URL: http://detector:7860
+    depends_on:
+      - detector
     healthcheck:
       test:
         [
@@ -34,6 +38,22 @@ services:
         target: /data
         bind:
           create_host_path: false
+    restart: unless-stopped
+
+  detector:
+    build:
+      context: apps/detector
+    init: true
+    env_file:
+      - path: apps/detector/.env
+        required: false
+    environment:
+      AI_DETECTOR_CACHE: /models
+    volumes:
+      # Reuses the models already downloaded for local dev.
+      - type: bind
+        source: ./apps/detector/data/models
+        target: /models
     restart: unless-stopped
 
 # BuildKit makes these available only while install/build commands run.

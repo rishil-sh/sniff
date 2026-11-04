@@ -1,0 +1,35 @@
+.env
+.venv
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.modal/
+*.mp4
+*.wav
+*.mp3
+*.flac
+.DS_Store
+
+# model weights (~GBs), downloaded on first use
+data/models/
+
+# sampled eval images (scripts/fetch_eval_data.py)
+data/eval/ai/*/
+data/eval/real/
+data/eval_small/
+data/eval_v2/
+
+# text eval set (scripts/fetch_text_eval.py); PAN'25 texts may not be redistributed
+data/eval_text/
+data/eval_audio/
+data/eval_audio_mp3/
+data/eval_voices/
+data/probe_train/
+data/probe_train_tts/
+data/eval_audio_results/

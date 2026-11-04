@@ -14,6 +14,7 @@ import { cors } from "hono/cors";
 import { createContext } from "./context";
 import { ENV } from "./env.server";
 import { auth } from "./services";
+import { handleWhatsAppWebhook } from "./whatsapp";
 
 initLogger({
   env: { service: "sniff-server" },
@@ -43,6 +44,8 @@ app.use(
 );
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => auth.handler(c.req.raw));
+
+app.on(["GET", "POST"], "/webhooks/whatsapp", (c) => handleWhatsAppWebhook(c.req.raw));
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [

@@ -1,30 +1,44 @@
-# sniff
+# Sniff
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Hono, ORPC, and more.
+Is this AI? Send a photo, voice note, video or paragraph of text, on the web or over WhatsApp, and Sniff replies in
+plain words with a verdict, backed by the detector evidence.
 
-## Features
+```
+web (Next :3001) ──oRPC /rpc──┐
+                              ├─► server (Hono :3000) ──► detector (FastAPI :7860) /v1/analyze → Verdict
+WhatsApp ─► /webhooks/whatsapp┘        ├─ Mastra agent on Muse (Meta Model API) → friendly reply
+                                       └─ SQLite: `check` history + Mastra memory
+```
 
-- **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **SQLite/Turso** - Database engine
-- **Authentication** - Better-Auth
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
-- **PWA** - Progressive Web App support
-- **Turborepo** - Optimized monorepo build system
+- `apps/detector`: the Python detector, an exact copy of `ai-detection-suite` (router → detectors → fusion). See
+  its own README. Run `uv sync --extra dev --extra deploy` once; models download into `apps/detector/data/models`.
+- `apps/server`: Hono + oRPC + better-auth. `src/check.ts` runs detector → agent → DB for both channels;
+  `src/whatsapp.ts` is the WhatsApp Cloud API webhook; `src/mastra/` holds the Sniff agent.
+- `apps/web`: Next.js + shadcn (`packages/ui`, logicsense theme). **Check** is a chat; **History** lists past checks.
+
+The detector writes the bold headline and footer; the agent (Muse) only writes the explanation line, or chats when
+the message is a question rather than something to check. Without `MODEL_API_KEY` the detector's template text is
+used.
 
 ## Getting Started
 
-First, install the dependencies:
-
 ```bash
 pnpm install
+(cd apps/detector && uv sync --extra dev --extra deploy)
+pnpm db:migrate
+pnpm dev          # detector :7860, server :3000, web :3001
 ```
+
+Voice notes from WhatsApp are Ogg/Opus; the server converts them to WAV with `ffmpeg` (`brew install ffmpeg`, or set
+`FFMPEG`).
+
+## WhatsApp
+
+1. In a Meta app with the WhatsApp product, set `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+   `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN` in `apps/server/.env`.
+2. Expose the server (e.g. `cloudflared tunnel --url http://localhost:3000`) and set the webhook to
+   `https://<host>/webhooks/whatsapp` with the same verify token. Subscribe to `messages`.
+3. Add your email to `ADMIN_EMAILS` to see WhatsApp checks in the web History.
 
 ## Database Setup
 

@@ -31,3 +31,6 @@ docker-compose.yml
 local.db
 local.db-*
 .data
+
+apps/detector/data
+apps/detector/.venv
