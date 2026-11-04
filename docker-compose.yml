@@ -1,5 +1,6 @@
 # docker compose up   → web http://localhost:3001, API http://localhost:3000
 # Works with no configuration. Optional settings (Muse key, WhatsApp, Llama pair) go in a root .env; see .env.example.
+# Public HTTPS on your own domain: set SNIFF_DOMAIN + PUBLIC_*_URL in .env, then `docker compose --profile public up`.
 name: sniff
 
 x-detector: &detector
@@ -14,6 +15,21 @@ x-detector: &detector
     - models:/models
 
 services:
+  # Only with `--profile public`. HTTPS with automatic Let's Encrypt certs; routes come from the `caddy` labels below.
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:2.13.1-alpine
+    profiles: [public]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CADDY_INGRESS_NETWORKS: sniff
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - caddy:/data
+    restart: unless-stopped
+
   # One-shot: downloads every model into the `models` volume (~10 GB; ~23 GB with the Llama pair), then exits.
   # Later starts find the files cached and finish in seconds.
   models:
@@ -52,6 +68,9 @@ services:
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
     volumes:
       - data:/data
+    labels:
+      caddy: api.${SNIFF_DOMAIN:-localhost}
+      caddy.reverse_proxy: "{{upstreams 3000}}"
     depends_on:
       detector:
         condition: service_healthy
@@ -68,6 +87,9 @@ services:
       - "3001:3001"
     environment:
       SERVER_URL: http://server:3000
+    labels:
+      caddy: ${SNIFF_DOMAIN:-localhost}
+      caddy.reverse_proxy: "{{upstreams 3001}}"
     depends_on:
       server:
         condition: service_healthy
@@ -76,3 +98,8 @@ services:
 volumes:
   models:
   data:
+  caddy:
+
+networks:
+  default:
+    name: sniff
