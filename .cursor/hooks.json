@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "pnpm exec ultracite fix --hook"
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,28 @@
+// Better-T-Stack project metadata
+//
+// Keep this file to use the `add` command.
+// Add addons: pnpm dlx create-better-t-stack@latest add
+//
+// Docs: https://better-t-stack.dev/docs
+// Stack Builder: https://better-t-stack.dev/new
+
+{
+  "$schema": "https://r2.better-t-stack.dev/schema.json",
+  "version": "3.49.0",
+  "createdAt": "2026-11-04T07:25:58.986Z",
+  "reproducibleCommand": "pnpm create better-t-stack@latest sniff --frontend next --backend hono --runtime bun --database sqlite --orm drizzle --api orpc --auth better-auth --payments none --addons evlog lefthook mcp oxlint pwa skills turborepo ultracite --examples none --db-setup none --web-deploy cloudflare --server-deploy docker --git --package-manager pnpm --no-install",
+  "database": "sqlite",
+  "orm": "drizzle",
+  "backend": "hono",
+  "runtime": "bun",
+  "frontend": ["next"],
+  "addons": ["evlog", "lefthook", "mcp", "oxlint", "pwa", "skills", "turborepo", "ultracite"],
+  "examples": [],
+  "auth": "better-auth",
+  "payments": "none",
+  "packageManager": "pnpm",
+  "dbSetup": "none",
+  "api": "orpc",
+  "webDeploy": "cloudflare",
+  "serverDeploy": "docker",
+}

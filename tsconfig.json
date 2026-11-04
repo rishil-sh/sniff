@@ -1,0 +1,3 @@
+{
+  "extends": "@sniff/config/tsconfig.base.json"
+}
