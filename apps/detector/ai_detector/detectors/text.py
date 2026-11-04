@@ -18,6 +18,7 @@ import re
 import threading
 import time
 from html import unescape
+from pathlib import Path
 
 from ai_detector.detectors.image import HF_CACHE, _device
 from ai_detector.router import RoutedInput
@@ -44,9 +45,15 @@ CLASSIFIERS = {
     "txt.desklib": ("desklib/ai-text-detector-v1.01", "desklib-deberta-v3-large", 768),
 }
 
+# Logistic head over both classifiers' pooled features (scripts/train_text_head.py). Trained on random 60-450 word
+# crops of Muse, PAN'25-train and MAGE-train text, so it covers short passages and generators the classifiers miss.
+HEAD_PATH = Path(__file__).with_name("text_head.npz")
+HEAD_VERSION = "text-head@muse-pan-mage-v1"
+
 _lock = threading.Lock()
 _pair = None
 _classifiers = None
+_head = None
 
 
 def load_pair():
@@ -95,10 +102,12 @@ def load_classifiers():
                 self.classifier = nn.Linear(config.hidden_size, 1)
                 self.post_init()
 
-            def forward(self, input_ids, attention_mask):
+            def forward(self, input_ids, attention_mask, **_):
                 h = self.model(input_ids, attention_mask=attention_mask)[0]
                 m = attention_mask.unsqueeze(-1).to(h.dtype)
-                return SequenceClassifierOutput(logits=self.classifier((h * m).sum(1) / m.sum(1).clamp(min=1e-9)))
+                pooled = (h * m).sum(1) / m.sum(1).clamp(min=1e-9)
+                # pooled features go out as hidden_states for the text head (HEAD_PATH)
+                return SequenceClassifierOutput(logits=self.classifier(pooled), hidden_states=(pooled,))
 
         device = _device()
         models = {}
@@ -135,12 +144,14 @@ def clean_text(t: str) -> str:
     return re.sub(" +", " ", t.replace(" ,", ","))
 
 
-def score_classifiers(text: str) -> dict[str, list[float]]:
-    """evidence id -> one logit per window. Windows overlap by half, so the whole text is read."""
+def score_classifiers(text: str) -> dict:
+    """evidence id -> one logit per window (windows overlap by half, so the whole text is read), plus
+    "features": each classifier's window-mean pooled representation, concatenated, for the text head."""
     import torch
 
     models, device = load_classifiers()
-    out = {}
+    out: dict = {}
+    feats = []
     for eid, (tokenizer, model) in models.items():
         max_len = CLASSIFIERS[eid][2]
         enc = tokenizer(
@@ -155,13 +166,40 @@ def score_classifiers(text: str) -> dict[str, list[float]]:
         )
         enc.pop("overflow_to_sample_mapping", None)
         logits: list[float] = []
+        pooled = []
         with torch.inference_mode():
             for i in range(0, enc["input_ids"].shape[0], WINDOW_BATCH):
-                lg = model(**{k: v[i : i + WINDOW_BATCH].to(device) for k, v in enc.items()}).logits.float()
+                o = model(**{k: v[i : i + WINDOW_BATCH].to(device) for k, v in enc.items()}, output_hidden_states=True)
+                lg = o.logits.float()
                 # fakespot: 2-way softmax {0: Human, 1: AI}; desklib: one sigmoid logit
                 logits += (lg[:, 1] - lg[:, 0] if lg.shape[-1] == 2 else lg[:, 0]).tolist()
+                h = o.hidden_states[-1].float()
+                pooled.append(h[:, 0] if h.dim() == 3 else h)  # RoBERTa <s> token; desklib is pre-pooled
         out[eid] = logits
+        feats.append(torch.cat(pooled).mean(0).cpu())
+    out["features"] = torch.cat(feats).numpy()
     return out
+
+
+def head_inputs(scores: dict, text: str):
+    """Text-head input: classifier features, both mean window logits, and log word count. Pure."""
+    import numpy as np
+
+    logits = [sum(scores[eid]) / len(scores[eid]) for eid in CLASSIFIERS]
+    return np.concatenate([scores["features"], logits, [math.log(max(len(text.split()), 1))]]).astype(np.float32)
+
+
+def score_head(scores: dict, text: str) -> float | None:
+    """Logit of the text head, or None when its weights are absent (fusion then uses the weighted rule)."""
+    import numpy as np
+
+    global _head
+    if _head is None:
+        if not HEAD_PATH.exists():
+            return None
+        _head = dict(np.load(HEAD_PATH))
+    x = head_inputs(scores, text)
+    return float(((x - _head["mean"]) / _head["std"]) @ _head["w"] + _head["b"])
 
 
 def token_stats(lb, li, y):
@@ -284,6 +322,25 @@ def _classifier_evidence(text: str) -> list[Evidence]:
                 details=details,
                 calibration=Calibration(set="uncalibrated-sigmoid"),
                 **common,
+            )
+        )
+    z = score_head(scores, text) if not error and "features" in scores else None
+    if z is not None:
+        items.append(
+            Evidence(
+                id="txt.head",
+                detector="sniff-text-head",
+                version=HEAD_VERSION,
+                modality="text",
+                signal="learned",
+                status="ok",
+                raw_score=z,
+                p_ai=_sigmoid(z),
+                points_to="ai" if z >= 0 else "real",
+                weight=0.0,  # decides through the text stacker (fusion.yaml), not the weighted rule
+                details={"words": len(text.split())},
+                calibration=Calibration(set="text-head-train"),
+                latency_ms=ms,
             )
         )
     return items

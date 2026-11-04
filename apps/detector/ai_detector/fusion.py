@@ -50,6 +50,10 @@ def fuse(
     p_stack = stacked_p_ai(stacker, evidence) if stacker else None
     # A stacker carries its own bands, set at a fixed FPR on held-out human text; they only fit its p_ai.
     bands_raw = (stacker.get("bands") if p_stack is not None else None) or policy.get("bands") or {}
+    # Short inputs are noisier, so the stacker may set stricter bands below a token count.
+    short = (stacker or {}).get("short_bands") if p_stack is not None else None
+    if short and routed.token_count is not None and routed.token_count < int(short["below_tokens"]):
+        bands_raw = short
     bands = Bands(
         no_ai_signal_below=float(bands_raw.get("no_ai_signal_below", 0.20)),
         likely_ai_above=float(bands_raw.get("likely_ai_above", 0.80)),

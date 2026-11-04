@@ -40,14 +40,15 @@ claiming it is AI-made or human-made.
 inconclusive, weigh the evidence and pick "ai", "human", or "unclear" when nothing points either way.
 
 Reading text evidence:
-- The verdict's `p_ai` is the combined, calibrated probability from two classifiers, txt.fakespot and \
-txt.desklib. Their own `p_ai` values are calibrated too.
+- The verdict's `p_ai` comes from txt.head, a model that reads what both classifiers (txt.fakespot and \
+txt.desklib) see in the text. It was trained on modern chat-model writing, including short and casual texts, and \
+decides when the classifiers' own `p_ai` disagree with it.
 - `details.window_logits` score successive parts of the text, positive meaning AI-like. A mix of high and low \
 windows suggests text that is partly AI-written or heavily edited.
 - `txt.tamper`: invisible or look-alike characters were removed before scoring. People rarely type them and they \
 are a known trick to fool detectors, so they point toward AI; copy-paste can add a few.
 - txt.binoculars and txt.fastdetect have weight 0 and are weak on modern chat models: supporting detail only.
-- Texts near the 150-token minimum are less reliable.
+- Texts under 150 tokens (about 130 words) are less reliable, so they need stronger evidence for likely_ai.
 
 Reading image evidence:
 - img.c2pa: Content Credentials or IPTC metadata. A valid signed claim of an AI source decides the verdict \
@@ -308,6 +309,7 @@ NAMES = {
     "img.spai": "SPAI spectral detector",
     "txt.fakespot": "Fakespot classifier",
     "txt.desklib": "Desklib classifier",
+    "txt.head": "Sniff text head",
     "txt.binoculars": "Binoculars",
     "txt.fastdetect": "Fast-DetectGPT",
 }

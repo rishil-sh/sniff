@@ -62,10 +62,13 @@ def _fake_classifiers(fakespot, desklib):
     return lambda _text: {"txt.fakespot": as_windows(fakespot), "txt.desklib": as_windows(desklib)}
 
 
-def _run(monkeypatch, zero_shot, classifiers):
+def _run(monkeypatch, zero_shot, classifiers, head=None, text=ESSAY):
+    """head: the text head's logit, or None for no head (fusion falls back to the weighted rule)."""
     monkeypatch.setattr(text_mod, "score_text", _fake_scores(*zero_shot))
-    monkeypatch.setattr(text_mod, "score_classifiers", _fake_classifiers(*classifiers))
-    verdict = asyncio.run(analyze(text=ESSAY))
+    fake = _fake_classifiers(*classifiers)
+    monkeypatch.setattr(text_mod, "score_classifiers", lambda t: fake(t) | {"features": None})
+    monkeypatch.setattr(text_mod, "score_head", lambda _scores, _text: head)
+    verdict = asyncio.run(analyze(text=text))
     return verdict, {e.id: e for e in verdict.evidence}
 
 
@@ -91,10 +94,28 @@ def test_classifiers_flag_modern_essay_the_zero_shot_pair_misses(monkeypatch):
 
 
 def test_one_classifier_misfiring_is_not_likely_ai(monkeypatch):
-    # Wikipedia articles fakespot flagged while desklib did not. The stacker weighs desklib's confident "human"
-    # above fakespot's misfire (no_ai_signal); the weighted rule's veto said inconclusive. Never likely_ai.
+    # Wikipedia articles fakespot flagged while desklib did not. The head reads both and says human; the weighted
+    # rule (no head) vetoes to inconclusive. Never likely_ai either way.
+    verdict, _ = _run(monkeypatch, (0.98, 0.4), (0.96, 0.01), head=-3.0)
+    assert verdict.fusion.method == "stacker" and verdict.verdict == "no_ai_signal"
     verdict, _ = _run(monkeypatch, (0.98, 0.4), (0.96, 0.01))
-    assert verdict.fusion.method == "stacker" and verdict.verdict != "likely_ai"
+    assert verdict.fusion.method == "weighted_mean" and verdict.verdict != "likely_ai"
+
+
+def test_head_catches_casual_ai_text_both_classifiers_miss(monkeypatch):
+    # The Muse case: both classifiers read a casual LinkedIn post as human; the head, trained on such text, decides.
+    verdict, by_id = _run(monkeypatch, (0.98, 0.4), (0.03, 0.05), head=3.0)
+    assert by_id["txt.head"].p_ai > 0.9 and by_id["txt.desklib"].points_to == "real"
+    assert verdict.verdict == "likely_ai"
+
+
+def test_short_text_needs_stronger_evidence(monkeypatch):
+    # p = sigmoid(1.2) = 0.77: likely_ai over 150 tokens, but under 150 tokens the stricter short_bands apply.
+    short = " ".join(ESSAY.split()[:90])  # ~100 estimated tokens: scored, but short
+    long, _ = _run(monkeypatch, (0.98, 0.4), (0.5, 0.5), head=1.2)
+    brief, _ = _run(monkeypatch, (0.98, 0.4), (0.5, 0.5), head=1.2, text=short)
+    assert long.verdict == "likely_ai" and brief.verdict == "inconclusive"
+    assert brief.bands.likely_ai_above > long.bands.likely_ai_above
 
 
 def test_classifier_failure_keeps_zero_shot_evidence(monkeypatch):
@@ -152,3 +173,20 @@ def test_pair_scores_long_text_in_windows(monkeypatch):
     assert (s["windows"], s["tokens"], s["truncated"]) == (2, 1024, True)
     # uniform logits: every token is as likely as expected, so Binoculars is exactly 1
     assert abs(s["binoculars"] - 1) < 1e-6 and len(s["gltr"]) == 1024
+
+
+def test_head_inputs_and_shipped_head_agree_on_size():
+    import numpy as np
+
+    # fakespot RoBERTa-base <s> (768) + desklib DeBERTa-v3-large mean pool (1024), then 2 mean logits + log words
+    scores = {"txt.fakespot": [1.0, 3.0], "txt.desklib": [-1.0], "features": np.zeros(768 + 1024, np.float32)}
+    x = text_mod.head_inputs(scores, "one two three four")
+    assert x.shape == (1795,) and x[-3] == 2.0 and x[-2] == -1.0 and abs(x[-1] - math.log(4)) < 1e-6
+    head = np.load(text_mod.HEAD_PATH)
+    assert head["w"].shape == head["mean"].shape == head["std"].shape == x.shape
+
+
+def test_no_head_file_means_no_head_score(monkeypatch, tmp_path):
+    monkeypatch.setattr(text_mod, "HEAD_PATH", tmp_path / "missing.npz")
+    monkeypatch.setattr(text_mod, "_head", None)
+    assert text_mod.score_head({"txt.fakespot": [0.0], "txt.desklib": [0.0], "features": None}, "x") is None

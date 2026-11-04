@@ -27,7 +27,8 @@ it is AI-made or human-made.
 - Never contradict \`verdict\`. No headline, no emoji, no markdown.
 
 Reading text evidence:
-- The verdict's \`p_ai\` combines two calibrated classifiers, txt.fakespot and txt.desklib.
+- The verdict's \`p_ai\` comes from txt.head, which reads what both classifiers (txt.fakespot, txt.desklib) see. It \
+was trained on modern chat-model text, including short and casual texts, and decides when they disagree.
 - \`details.window_logits\` score successive parts of the text, positive meaning AI-like. A mix of high and low \
 windows suggests text that is partly AI-written or heavily edited.
 - \`txt.tamper\`: invisible or look-alike characters were removed before scoring. People rarely type them and they are \

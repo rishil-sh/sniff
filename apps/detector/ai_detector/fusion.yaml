@@ -24,6 +24,7 @@ weights:
   txt.fastdetect: 0
   txt.fakespot: 0.5
   txt.desklib: 0.5
+  txt.head: 0 # decides through stackers.text
   # Audio (English), from scripts/eval_audio.py on the audio-detection branch, 2026-11-03 (docs/audio-detection.md):
   # the w2v-BERT probe decides. DF Arena (37% false positives on Common Voice humans) and MamBo
   # (17-37%) stay in the report as evidence with no vote; weight 0 also removes their disagreement veto.
@@ -97,24 +98,26 @@ platt:
     }
 # Logistic stackers over raw detector scores; they replace the weighted mean and disagreement veto for a modality.
 stackers:
-  # Fit 2026-11-03 on the eval_text fit split. On the held-out 620 human / 436 AI texts, vs the weighted rule:
-  #   humans called likely_ai  9.7% -> 2.4% [1.5-4.0]   (worst group: CS224N abstracts 16%, was 60%)
-  #   AI called likely_ai     97.9% -> 95.6%            (worst: llama-3.1-8b-instruct 62%, paraphrased gpt-4-turbo 86%)
-  #   humans inconclusive     15.2% -> 3.9%             AI called no_ai_signal 0.5% -> 3.0% (band edge 0.25)
-  #   right when it says AI: 96.5%; right when it says human: 97.8%; inconclusive: 2.8% of texts (24/30 human)
+  # Text head (detectors/text.py HEAD_PATH, scripts/train_text_head.py, 2026-11-05): a logistic layer over both
+  # classifiers' pooled features, trained on random 40-450 word crops of 1,260 Muse texts, PAN'25 train (22
+  # generators) and MAGE train (27 generators, human Reddit/Yelp/stories/news). Replaces the 2-logit stacker, which
+  # called 58% of Muse text human. Independent benchmark (HC3, MAGE GPT-4 OOD, PAN'25 val, unseen Muse prompt types;
+  # 2,117 cuts; old -> new):
+  #   AI called likely_ai     150w 82.6% -> 93.0%   250w 86.3% -> 95.6%   100w (newly accepted) 87%
+  #   AI called no_ai_signal  150w 10.7% ->  4.1%   250w 10.4% ->  3.3%   100w 4.1%
+  #   humans called likely_ai 150w  1.0% ->  1.0%   250w  4.1% ->  1.4%   100w 1.6%
+  #   Muse caught             21-41% -> 94-100% at 70-250 words
+  # Bands from the validation split only: likely_ai_above = 2% of human texts over it, no_ai_signal_below = 3% of AI
+  # texts under it (>= 85 words). Under 150 tokens the 99th/3rd percentiles of 80-135 word texts apply instead.
+  # Not measured: casual human chat (WhatsApp-style); the human sets are essays, news, Q&A, reviews, Reddit, stories.
   text:
-    intercept: -3.422161
-    coef: { txt.fakespot: 0.360369, txt.desklib: 0.46532 }
-    versions:
-      {
-        txt.fakespot: fakespot-ai/roberta-base-ai-text-detection-v1,
-        txt.desklib: desklib/ai-text-detector-v1.01,
-      }
-    # no_ai_signal_below raised by hand from the fitted 0.0323 (2026-11-03): below 0.25, 97.8% of held-out texts
-    # were human on both splits, so the WhatsApp reply says "Written by a human" instead of "can't say for sure".
-    bands: { no_ai_signal_below: 0.25, likely_ai_above: 0.6155 }
-    target_fpr: 0.01
-    set: eval_text-fit1027
+    intercept: 0
+    coef: { txt.head: 1.0 }
+    versions: { txt.head: text-head@muse-pan-mage-v1 }
+    bands: { no_ai_signal_below: 0.46, likely_ai_above: 0.659 }
+    short_bands:
+      { below_tokens: 150, no_ai_signal_below: 0.357, likely_ai_above: 0.851 }
+    set: text-head-val
   # Learned 2026-11-04 by a leave-one-vendor-out logistic stacker over the three speech detectors on 610
   # training clips (ElevenLabs, OpenAI, MMS, Piper, macOS vs Common Voice + LibriSpeech; probe scores out of fold).
   # Held-out worst-vendor recall at 1% human FPR: probe 0.89, probe+DF Arena 0.88, +MamBo 0.86, all three 0.83,
@@ -137,6 +140,6 @@ stackers:
   # score is no evidence of a real video, so the head can say likely_ai but never no_ai_signal on a video.
   video:
     intercept: 0.0
-    coef: {vid.head: 1.0}
-    bands: {no_ai_signal_below: 0.0, likely_ai_above: 0.85}
+    coef: { vid.head: 1.0 }
+    bands: { no_ai_signal_below: 0.0, likely_ai_above: 0.85 }
     set: kling-4+real-4 (2026-11-04)

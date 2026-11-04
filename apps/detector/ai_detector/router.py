@@ -17,7 +17,9 @@ AUDIO_MAX_BYTES = 32 * 1024 * 1024  # Muse Voice Transcribe limit
 VIDEO_MAX_BYTES = 100 * 1024 * 1024
 VIDEO_MAX_S = 60.0
 AUDIO_MAX_S = 10 * 60.0
-TEXT_MIN_TOKENS = 150
+# ~85 words. Below this the text head wrongly flags 9-12% of human text (fusion.yaml stackers.text); 100-150 tokens
+# get stricter short_bands.
+TEXT_MIN_TOKENS = 100
 TEXT_MAX_CHARS = 100_000
 
 _TOKEN_RE = re.compile(r"\w+|[^\w\s]", re.UNICODE)
