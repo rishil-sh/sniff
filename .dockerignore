@@ -31,6 +31,8 @@ docker-compose.yml
 local.db
 local.db-*
 .data
+# Local model cache (~16 GB); containers use the `models` volume instead
+/data
 
 apps/detector/data
 apps/detector/.venv

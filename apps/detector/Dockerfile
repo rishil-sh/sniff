@@ -38,10 +38,13 @@ for path in site.rglob("*"):
     if path.is_file() and path.suffix in {".pyi", ".a"}:
         path.unlink()
 PY
-RUN find /app/.venv -type f \( -name '*.so' -o -name '*.so.*' -o -name 'ffmpeg-*' \) -print0 \
+# Skip auditwheel-vendored *.libs/: they are patchelf'd, and stripping them corrupts them (SIGBUS on import).
+RUN find /app/.venv -type f \( -name '*.so' -o -name '*.so.*' -o -name 'ffmpeg-*' \) -not -path '*.libs/*' -print0 \
     | xargs -0 -r strip --strip-unneeded || true
 
 FROM python:3.11-slim
+# opencv-python (via invisible-watermark, used by the watermark detector) links libxcb, libGL and glib even headless.
+RUN apt-get update && apt-get install -y --no-install-recommends libxcb1 libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
 RUN useradd --create-home --uid 1000 detector && mkdir /models && chown detector /models
 WORKDIR /app
 COPY --from=build --chown=detector:detector /app/.venv /app/.venv
