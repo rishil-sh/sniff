@@ -1,6 +1,7 @@
 # docker compose up   → web http://localhost:3001, API http://localhost:3000
 # Works with no configuration. Optional settings (Muse key, WhatsApp, Llama pair) go in a root .env; see .env.example.
-# Public HTTPS on your own domain: set SNIFF_DOMAIN + PUBLIC_*_URL in .env, then `docker compose --profile public up`.
+# Public HTTPS on your own domain: set SNIFF_DOMAIN + PUBLIC_*_URL in .env, then `docker compose --profile public up`
+# (Caddy, needs ports 80/443 reachable) or `docker compose --profile tunnel up` (Cloudflare Tunnel, no open ports).
 name: sniff
 
 x-detector: &detector
@@ -30,6 +31,18 @@ services:
       - caddy:/data
     restart: unless-stopped
 
+  # Only with `--profile tunnel`. Public HTTPS via Cloudflare Tunnel: no open ports, no Caddy. Hostname → service
+  # routes live in the Cloudflare dashboard (e.g. sniff.example.com → http://web:3001, api-sniff.example.com → http://server:3000; one level deep, see .env.example).
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
+    profiles: [tunnel]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+    restart: unless-stopped
+
   # One-shot: downloads every model into the `models` volume (~10 GB; ~23 GB with the Llama pair), then exits.
   # Later starts find the files cached and finish in seconds.
   models:
@@ -57,6 +70,7 @@ services:
       DETECTOR_URL: http://detector:7860
       BETTER_AUTH_URL: ${PUBLIC_SERVER_URL:-http://localhost:3000}
       CORS_ORIGIN: ${PUBLIC_WEB_URL:-http://localhost:3001}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       # Generated and stored in the data volume when empty (see apps/server/docker-entrypoint.sh).
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       MODEL_API_KEY: ${MODEL_API_KEY:-}

@@ -7,6 +7,7 @@ export interface AuthConfig {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   CORS_ORIGIN: string;
+  COOKIE_DOMAIN?: string;
 }
 
 export const createAuth = (
@@ -16,6 +17,11 @@ export const createAuth = (
 ) =>
   betterAuth({
     advanced: {
+      // Web and API on different hosts: scope the cookie to their parent domain so the web server's session check gets it.
+      crossSubDomainCookies: {
+        domain: env.COOKIE_DOMAIN,
+        enabled: Boolean(env.COOKIE_DOMAIN),
+      },
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "none",
