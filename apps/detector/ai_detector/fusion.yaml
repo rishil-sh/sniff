@@ -30,6 +30,8 @@ weights:
   aud.w2vbert: 1.0
   aud.dfarena: 0.0
   aud.mambo: 0.0
+  # Video: frame-aggregated image head (detectors/video.py). Soundtrack evidence uses aud.* weights above.
+  vid.head: 1
 # Per-detector Platt fits from scripts/eval_images.py. Empty = raw sigmoids.
 # Fit on all of eval_v2; held-out fold fits (tune_fusion.py) land within a=0.40-0.45, b=2.3-2.7.
 platt:

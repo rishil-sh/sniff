@@ -60,3 +60,5 @@ temp
 # Python detector: models/eval data (GBs) and venv
 apps/detector/data/
 apps/detector/.venv
+data/
+__pycache__/
