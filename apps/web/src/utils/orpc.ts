@@ -9,8 +9,10 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export function createQueryClient() {
-  return new QueryClient({
+import { serverUrl } from "@/lib/server-url";
+
+export const createQueryClient = () =>
+  new QueryClient({
     queryCache: new QueryCache({
       onError: (error, query) => {
         toast.error(`Error: ${error.message}`, {
@@ -24,18 +26,17 @@ export function createQueryClient() {
       },
     }),
   });
-}
 
 let browserQueryClient: QueryClient | undefined;
 
-export function getQueryClient() {
+export const getQueryClient = () => {
   if (environmentManager.isServer()) {
     return createQueryClient();
   }
 
   browserQueryClient ??= createQueryClient();
   return browserQueryClient;
-}
+};
 
 export const link = new RPCLink({
   fetch(url, options) {
@@ -52,7 +53,7 @@ export const link = new RPCLink({
     const { headers } = await import("next/headers");
     return Object.fromEntries(await headers());
   },
-  url: `${process.env.NEXT_PUBLIC_SERVER_URL!.replace(/\/$/, "")}/rpc`,
+  url: `${serverUrl()}/rpc`,
 });
 
 export const client: AppRouterClient = createORPCClient(link);

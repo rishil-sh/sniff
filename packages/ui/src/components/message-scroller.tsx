@@ -1,8 +1,8 @@
 "use client";
 
+import { MessageScroller as MessageScrollerPrimitive } from "@shadcn/react/message-scroller";
 import { Button } from "@sniff/ui/components/button";
 import { cn } from "@sniff/ui/lib/utils";
-import { MessageScroller as MessageScrollerPrimitive } from "@shadcn/react/message-scroller";
 import { ArrowDownIcon } from "lucide-react";
 import * as React from "react";
 

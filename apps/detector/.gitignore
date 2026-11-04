@@ -33,3 +33,8 @@ data/eval_voices/
 data/probe_train/
 data/probe_train_tts/
 data/eval_audio_results/
+
+# The bundled samples are part of the repo (see samples/README.md), media extensions included
+!samples/**
+samples/**/.DS_Store
+samples/audio/test pal 11.mp3

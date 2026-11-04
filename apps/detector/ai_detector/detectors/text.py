@@ -23,9 +23,10 @@ from ai_detector.detectors.image import HF_CACHE, _device
 from ai_detector.router import RoutedInput
 from ai_detector.schemas import Calibration, Evidence
 
-# Llama-3.1-8B pair needs ~32 GB in bf16. On a 24 GB machine use meta-llama/Llama-3.2-3B(-Instruct).
-OBSERVER = os.environ.get("AI_DETECTOR_TEXT_OBSERVER", "meta-llama/Llama-3.1-8B")
-PERFORMER = os.environ.get("AI_DETECTOR_TEXT_PERFORMER", "meta-llama/Llama-3.1-8B-Instruct")
+# Ungated bf16 mirrors of Llama-3.2-3B (base + Instruct, ~13 GB in bf16). For the original 8B pair (~32 GB, gated,
+# needs HF_TOKEN) set both to meta-llama/Llama-3.1-8B(-Instruct). AI_DETECTOR_TEXT_PAIR=0 skips the pair entirely.
+OBSERVER = os.environ.get("AI_DETECTOR_TEXT_OBSERVER", "mlx-community/Llama-3.2-3B-bf16")
+PERFORMER = os.environ.get("AI_DETECTOR_TEXT_PERFORMER", "mlx-community/Llama-3.2-3B-Instruct")
 MAX_TOKENS = 512  # per forward pass of the pair (Binoculars' max_token_observed)
 # ponytail: the pair scores the first 8 x 512 tokens; raise if long documents need the zero-shot scores
 MAX_PAIR_WINDOWS = 8

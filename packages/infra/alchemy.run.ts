@@ -10,30 +10,30 @@ export default Alchemy.Stack(
     providers: Cloudflare.providers(),
     state: Cloudflare.state(),
   },
-  Effect.gen(function* () {
+  Effect.gen(function* deploy() {
     const webWorker = yield* Cloudflare.Website.StaticSite("web", {
-      cwd: "../../apps/web",
-      command: "pnpm run build:cloudflare",
-      // Rebuild shared workspace dependencies until Alchemy has a workspace-aware default memo.
-      memo: false,
-      outdir: ".open-next/assets",
-      main: "../../apps/web/.open-next/worker.js",
       bundle: true,
+      command: "pnpm run build:cloudflare",
       compatibility: {
         flags: ["nodejs_compat", "global_fetch_strictly_public"],
+      },
+      cwd: "../../apps/web",
+      dev: {
+        command: "pnpm run dev:bare",
+        url: "http://localhost:3001",
       },
       env: {
         IMAGES: Cloudflare.Images.Images(),
         NEXT_PUBLIC_SERVER_URL: Config.String("NEXT_PUBLIC_SERVER_URL"),
       },
-      dev: {
-        command: "pnpm run dev:bare",
-        url: "http://localhost:3001",
-      },
+      main: "../../apps/web/.open-next/worker.js",
+      // Rebuild shared workspace dependencies until Alchemy has a workspace-aware default memo.
+      memo: false,
+      outdir: ".open-next/assets",
     });
 
     return {
       web: webWorker.url,
     };
-  }),
+  })
 );

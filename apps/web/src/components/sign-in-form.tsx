@@ -4,17 +4,13 @@ import { Label } from "@sniff/ui/components/label";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import z from "zod";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
 
-export default function SignInForm({
-  onSwitchToSignUp,
-}: {
-  onSwitchToSignUp: () => void;
-}) {
+const SignInForm = ({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) => {
   const router = useRouter();
   const { isPending } = authClient.useSession();
 
@@ -129,13 +125,12 @@ export default function SignInForm({
       </form>
 
       <div className="mt-4 text-center">
-        <Button
-          variant="link"
-          onClick={onSwitchToSignUp}
-        >
+        <Button variant="link" onClick={onSwitchToSignUp}>
           Need an account? Sign Up
         </Button>
       </div>
     </div>
   );
-}
+};
+
+export default SignInForm;

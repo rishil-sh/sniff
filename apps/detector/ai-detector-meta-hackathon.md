@@ -1,6 +1,6 @@
 # Open-source AI-content detector: build guide for the Meta Global AI Developer Hackathon
 
-*Prepared 2026-10-27; the audio sections were added the same day. Every fact that depends on a version, price or license was checked against the cited page on 2026-10-27. [n] refers to the numbered list in section 12. "Unverified" marks claims I could not confirm.*
+_Prepared 2026-10-27; the audio sections were added the same day. Every fact that depends on a version, price or license was checked against the cited page on 2026-10-27. [n] refers to the numbered list in section 12. "Unverified" marks claims I could not confirm._
 
 **The idea:** one open-source tool that runs detectors from published research behind a single interface. For an image, a video, an audio clip or a piece of text, it returns a verdict on whether the content is AI-generated, together with the evidence behind that verdict.
 
@@ -8,19 +8,19 @@
 
 ## 1. TL;DR
 
-- **Output:** a *calibrated* probability that the content is AI-generated, reported in three bands: **likely AI**, **inconclusive** or **no AI signal found**. When provenance metadata or a watermark says the content is AI, the verdict is **declared AI** instead. Every verdict comes with its evidence.
+- **Output:** a _calibrated_ probability that the content is AI-generated, reported in three bands: **likely AI**, **inconclusive** or **no AI signal found**. When provenance metadata or a watermark says the content is AI, the verdict is **declared AI** instead. Every verdict comes with its evidence.
 - **Provenance first:** read C2PA manifests (c2pa-python [80]) and the IPTC `trainedAlgorithmicMedia` tag [81], then check for invisible watermarks with Meta's open-source Video Seal / PixelSeal (MIT) [27].
 - **Images:** use the **Community Forensics** ViT-S detector (MIT weights; works on day one) [60] plus the CLIP-based detector from Cozzolino et al. (Apache-2.0) [58]. Stretch goal: a linear probe trained on frozen **DINOv3 or Perception Encoder** features [34][35][64–66].
 - **Video:** sample 16 frames, run the image detectors on each, and aggregate. Add the Video Seal check, C2PA and Muse Spark's video observations. Stretch goal: **ReStraV**, a temporal detector built on DINOv2 features [73].
 - **Audio (speech):** read C2PA, which also works in WAV, MP3, M4A and FLAC files [87], and check for Meta's **AudioSeal** watermark (MIT, code and weights) [28]. Then run **Wav2Vec2-AASIST** (MIT), a published detector built on Meta's **XLS-R** speech model, over short windows [88][89]. **Muse Voice Transcribe** supplies the transcript for the report [90]. Treat audio verdicts as advisory, because open audio detectors break down on real-world clips [91][92]. Music is out of scope.
 - **Text:** compute **Binoculars + Fast-DetectGPT** on a local **Llama-3.1-8B base + Instruct** pair [41][42][20]. This has to run locally because the Meta Model API rejects `logprobs` with HTTP 400 [7].
-- **Muse Spark 1.3** (Meta Model API) is an analyst bound to the evidence. It writes the report as JSON-schema structured output [8], reads the image or video to add observations [10][11], and, as a stretch goal, gathers more evidence through tool calls [9]. It *explains* the verdict; our code *decides* it.
+- **Muse Spark 1.3** (Meta Model API) is an analyst bound to the evidence. It writes the report as JSON-schema structured output [8], reads the image or video to add observations [10][11], and, as a stretch goal, gathers more evidence through tool calls [9]. It _explains_ the verdict; our code _decides_ it.
 - **Muse Image** ($0.01 per image [4]) generates a test set from a generator none of the detectors have seen. Measuring Muse Spark's own zero-shot accuracy against that set is the "surfaced capability" the judges reward.
-- **Fusion:** a few rules plus documented weights in one YAML file. Each detector's score is calibrated with Platt scaling on held-out data. The verdict is *inconclusive* when the input is out of domain or the detectors disagree.
+- **Fusion:** a few rules plus documented weights in one YAML file. Each detector's score is calibrated with Platt scaling on held-out data. The verdict is _inconclusive_ when the input is out of domain or the detectors disagree.
 - **Stack:** Python, FastAPI + Gradio, PyTorch/transformers, and one L40S 48 GB GPU on Modal (~$1.95/h [86]). The OpenAI SDK points at `https://api.meta.ai/v1` [5].
 - **Entry:** **Indie track** (teams of up to 4), theme **"Build for Your World"**. Judging weights: Impact 30%, Meta tooling 25%, Demo 25%, Technical 20% [1].
 
-**Pitch:** *Drop in an image, a video, a voice clip or a passage of text and get an open-source, evidence-first verdict that combines provenance, watermarks and published detectors, explained by Meta's Muse Spark, and that says "inconclusive" when that is the honest answer.*
+**Pitch:** _Drop in an image, a video, a voice clip or a passage of text and get an open-source, evidence-first verdict that combines provenance, watermarks and published detectors, explained by Meta's Muse Spark, and that says "inconclusive" when that is the honest answer._
 
 ---
 
@@ -29,7 +29,7 @@
 The Cerebral Valley page is rendered with JavaScript. Its HTML still embeds the full **"Hackathon Terms & Conditions ('Official Rules') and Event Waiver"**, dated **October 25, 2026** [1]. The facts below come from that text unless another source is cited.
 
 | Item | Fact |
-|---|---|
+| --- | --- |
 | Organizers | Cerebral Valley Enterprises, Inc. and Meta Platforms, Inc. [1][2] |
 | Format | **Virtual only**, open worldwide, free if selected, capped at 20,000 accepted applicants [1][2] |
 | Eligibility | 18 or older and an adult where you live. Not open to people in Belarus, China, Russia, Ukraine, Syria, Crimea, Donetsk, Luhansk, Cuba, North Korea or Iran. Staff of Meta or Cerebral Valley, their families, and government-affiliated individuals are also excluded [1] |
@@ -43,7 +43,7 @@ The Cerebral Valley page is rendered with JavaScript. Its HTML still embeds the 
 | Submission | Through the Cerebral Valley portal at `/hackathon/submit`. Teams appoint a Representative, who submits and names every member [1] |
 | IP | You keep ownership of your work. In return you grant the organizers a perpetual, irrevocable, worldwide, royalty-free license to it. The work must be original. Open source is allowed "provided applicable open source licenses are followed" [1] |
 
-**Context.** Meta Model API became generally available at Connect 2026 [3]. The old Llama API docs URL now returns a 302 redirect to the Meta Model API docs, and the API's models page lists **no Llama models** [5][6][19]. Wearables and VR run as *separate* Meta competitions [3], so this hackathon is not about glasses.
+**Context.** Meta Model API became generally available at Connect 2026 [3]. The old Llama API docs URL now returns a 302 redirect to the Meta Model API docs, and the API's models page lists **no Llama models** [5][6][19]. Wearables and VR run as _separate_ Meta competitions [3], so this hackathon is not about glasses.
 
 **Gaps to confirm on Discord:**
 
@@ -60,11 +60,11 @@ The Cerebral Valley page is rendered with JavaScript. Its HTML still embeds the 
 **Mapping the MVP to the judging criteria**
 
 | Criterion | How the MVP answers it |
-|---|---|
+| --- | --- |
 | Impact 30% | Pick a concrete user: community fact-checkers, a student newsroom, or moderators who check viral posts. Ship it open source with a JSON API. Do **not** pitch it for catching students, because text detectors have documented bias (§3, §11) |
 | Meta tooling 25% | Every Meta model does a real job (§4). The "unexpected capabilities" are two measured results: Muse Spark's zero-shot accuracy, and whether it can spot images from Meta's own generator |
 | Technical 20% | Calibrated fusion, documented weights, robustness tests, reproducible evaluation scripts, a license audit |
-| Demo 25% | Five tested cases, one of which is honestly *inconclusive*. Keep the GPU warm, deploy to a public URL, and record a backup video |
+| Demo 25% | Five tested cases, one of which is honestly _inconclusive_. Keep the GPU warm, deploy to a public URL, and record a backup video |
 
 **Theme fit.** The idea fits **Build for Your World** if it is framed around one community's verification problem. It does not fit "Push the Frontier". There are two risks:
 
@@ -78,8 +78,8 @@ Lead the demo with images and video, where the signals are strongest. Present te
 ## 3. What detection can and can't do
 
 | Signal | Examples | Positive means | Negative means | Fails when |
-|---|---|---|---|---|
-| Provenance metadata | C2PA [79]; IPTC `trainedAlgorithmicMedia`, defined as "created algorithmically using an AI model trained on captured content" [81] | The creator or tool *declared* the content AI-generated. A valid C2PA signature makes that declaration tamper-evident | **Nothing.** Screenshots and re-encoding strip metadata | Metadata is stripped, or unsigned IPTC/XMP is edited |
+| --- | --- | --- | --- | --- |
+| Provenance metadata | C2PA [79]; IPTC `trainedAlgorithmicMedia`, defined as "created algorithmically using an AI model trained on captured content" [81] | The creator or tool _declared_ the content AI-generated. A valid C2PA signature makes that declaration tamper-evident | **Nothing.** Screenshots and re-encoding strip metadata | Metadata is stripped, or unsigned IPTC/XMP is edited |
 | Invisible watermark | Video Seal/PixelSeal [27], AudioSeal [28], SynthID [52], Meta's Content Seal [16] | The content was marked by **that** scheme | Nothing about content from other generators | It only sees its own scheme, and removal and forgery attacks exist [27] |
 | Learned or statistical detector | Binoculars [41], Community Forensics [60], ReStraV [73], Wav2Vec2-AASIST [88] | The content's statistics resemble known generator outputs | Weak evidence that the content is real | New generators, compression, paraphrasing, language bias |
 | VLM reasoning | Muse Spark | Visible semantic anomalies | Little | The model hallucinates, or the generator leaves few visible errors |
@@ -102,7 +102,7 @@ So each detector reports a probability calibrated on labelled held-out data, and
 ## 4. Meta models and tools (as of 2026-10-27)
 
 | Model / tool | Role in our system | Access and hardware | License | Source |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **Muse Spark 1.3** (`muse-spark-1.3`) | Analyst and report writer. Also adds image and video observations, and serves as the zero-shot baseline in evaluation | Meta Model API, compatible with the OpenAI and Anthropic SDKs. 1M-token context. Accepts text, image, video, audio and PDF, though the models page says audio is "not fully supported" on 1.3, so nothing here depends on it. Supports tools and JSON schema. **`logprobs` returns HTTP 400**, and only `n=1` is allowed. $1.25 / $4.25 per 1M input/output tokens, 3,000 RPM. Use the standard tier ("Not used to improve our products"), not `-contributor` | API terms; closed weights | [4][5][6][7][8][9][18] |
 | **Muse Image** | Generates fresh, unseen fakes for evaluation | API, $0.01 per image, 150 RPM. Whether API outputs carry Content Seal or IPTC metadata is **unverified**; test this on day 1 | API terms | [4][13][14][16] |
 | **Muse Voice Transcribe** | Transcript and speaker turns for the audio report. It is not a detector | API (`muse-voice-transcribe-1.0`), $0.18 per hour of audio. Takes mono 16-bit PCM WAV at 16 or 24 kHz, up to 10 minutes or 32 MB. 25 languages; turn-level timestamps only. The Model API has no text-to-speech | API terms | [90][5] |
@@ -114,7 +114,7 @@ So each detector reports a probability calibrated on labelled held-out data, and
 | Llama 4 Scout / Maverick | Not needed. Muse Spark replaced them on the API, and Scout (109B total parameters, 17B active) needs an H100 even at int4 | Open weights, released 2025-04-05 | Llama 4 license. The AUP restricts multimodal rights for licensees based in the EU | [23][24] |
 | Llama Guard 4 | **No role.** It classifies prompts and responses against hazard categories S1–S14. It is not a provenance detector | Open weights, 12B | Llama 4 license | [25] |
 | **Video Seal / PixelSeal / ChunkySeal** | Watermark check on images and video. Detects **only this family's** watermarks | pip package; small (VRAM **unverified**) | MIT, covering code and models | [27] |
-| **AudioSeal** | Watermark check on audio files and video soundtracks. It scores every sample, so it can show *where* in a clip the watermark is. Detects **only AudioSeal** watermarks | pip package; small (VRAM **unverified**) | MIT, covering code and weights since 2024-04-02 | [28] |
+| **AudioSeal** | Watermark check on audio files and video soundtracks. It scores every sample, so it can show _where_ in a clip the watermark is. Detects **only AudioSeal** watermarks | pip package; small (VRAM **unverified**) | MIT, covering code and weights since 2024-04-02 | [28] |
 | Watermark Anything | Stretch: an extra image watermark check. Its repo is archived | Open | MIT. The original paper weights are CC BY-NC | [29] |
 | Stable Signature, Three Bricks, OmniSeal Bench | Skip. Each detects only its own scheme or key (Three Bricks covers LLM text), and all are non-commercial | Open | CC BY-NC 4.0 | [30][31][32] |
 | **DINOv2** ViT-S/14 | Features for ReStraV. Also the backbone that B-Free fine-tunes | torch.hub, under 1 GB | Apache 2.0 | [33][59][73] |
@@ -124,7 +124,7 @@ So each detector reports a probability calibrated on labelled held-out data, and
 | MMS-TTS (English) | Generates fresh synthetic speech for the audio test set, since the Model API can't make speech | Open weights (VITS), small | CC BY-NC 4.0: use for evaluation only, don't ship it | [93] |
 | DFDC dataset + 1st-place solution | Skip for the MVP. It covers 2019–20 face swaps, not text-to-video. 124k videos; the top model scored 65.18% average precision on the black-box set | AWS download | Dataset terms on dfdc.ai (**unverified**); Seferbekov's code is MIT | [37][38][39] |
 
-**Where Meta models strengthen the submission.** The tooling criterion rewards going "beyond a basic integration" [1]. Two design choices meet that bar: Muse Spark's output is *bound to deterministic evidence* rather than trusted, and the project *publishes measurements* of Muse Spark as a zero-shot detector and of every detector on Muse Image output. On the audio side, the detector's front end (XLS-R) and the watermark check (AudioSeal) are both Meta research models, and transcription runs on the Model API.
+**Where Meta models strengthen the submission.** The tooling criterion rewards going "beyond a basic integration" [1]. Two design choices meet that bar: Muse Spark's output is _bound to deterministic evidence_ rather than trusted, and the project _publishes measurements_ of Muse Spark as a zero-shot detector and of every detector on Muse Image output. On the audio side, the detector's front end (XLS-R) and the watermark check (AudioSeal) are both Meta research models, and transcription runs on the Model API.
 
 ---
 
@@ -133,7 +133,7 @@ So each detector reports a probability calibrated on labelled held-out data, and
 **Text.** The Binoculars threshold was tuned for Falcon-7B, so recalibrate it for Llama [41].
 
 | Method | Paper | Code (license) | How it works | Needs | MVP |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | Binoculars | Hans et al., ICML 2024 [41] | ahans30/Binoculars (BSD-3) | Ratio of perplexity to cross-perplexity between two related LMs. Caught over 90% of ChatGPT text at 0.01% FPR using a Falcon pair | 2 LMs with the same tokenizer; GPU | **Use** |
 | Fast-DetectGPT | Bao et al., ICLR 2024 [42] | baoguangsheng/fast-detect-gpt (MIT) | Normalized gap between a text's log-likelihood and the log-likelihood the model expects. 340× faster than DetectGPT. The authors report that a Llama3-8B base/Instruct pair "substantially outperforms" Falcon (README, 2026-01-31; not peer-reviewed) | Same forward passes as Binoculars | **Use** |
 | GLTR | Gehrmann et al., ACL 2019 demo [44] | detecting-fake-text (Apache-2.0) | Colours each token by its rank under the LM | Same logits | **Use** for visuals, not as a score |
@@ -145,7 +145,7 @@ So each detector reports a probability calibrated on labelled held-out data, and
 
 The Binoculars paper tested Llama-2 pairs in its appendix, and results varied widely with the pairing [41]. I found **no peer-reviewed results for Llama-3.x pairs** (**unverified** apart from the README note in [42]), so measure it yourself.
 
-Binoculars and Fast-DetectGPT are built from the *same two quantities* when the sampling model is the base and the scoring model is Instruct. Binoculars is their ratio and Fast-DetectGPT is their z-score (my reading of both papers' definitions and code). One forward pass per model therefore gives both scores. They are correlated, so fusion should treat them as one group:
+Binoculars and Fast-DetectGPT are built from the _same two quantities_ when the sampling model is the base and the scoring model is Instruct. Binoculars is their ratio and Fast-DetectGPT is their z-score (my reading of both papers' definitions and code). One forward pass per model therefore gives both scores. They are correlated, so fusion should treat them as one group:
 
 ```python
 # y = tokens[1:]; lb, li = logits[:-1] from Llama-3.1-8B (base/observer) and -Instruct (performer)
@@ -160,7 +160,7 @@ fast_detect = (ll.sum() - mu.sum()) / var.sum().sqrt()    # higher => machine-li
 **Images.**
 
 | Method | Paper | Code (license) | How it works | Needs | MVP |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | **Community Forensics** | Park & Owens, CVPR 2025 [60] | Code MIT; weights `OwensLab/commfor-model-384` MIT (21.8M params) | ViT-S trained on 2.7M images from **4,803 generators**. More generators in training means better generalization | CPU or small GPU | **Use (day one)** |
 | CLIP-based | Cozzolino et al., CVPRW 2024 [58] | Apache-2.0, with weights | CLIP features plus a light classifier trained on "a handful of example images from a single generative model" | About 2 GB | **Use** as a second opinion |
 | B-Free | Guillaro et al., CVPR 2025 [59] | GRIP license, **nonprofit use only** | DINOv2-reg ViT fine-tuned on "bias-free" Stable Diffusion 2.1 self-reconstructions and inpaintings | GPU | Optional plug-in, **not bundled** |
@@ -176,7 +176,7 @@ For probe training, stream a few thousand images from Community Forensics (CC BY
 **Video.**
 
 | Method | Paper | Code (license) | How it works | Needs | MVP |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | Frame aggregation | Baseline | Ours | Run image detectors on sampled frames, then take the median and the top-k mean | Image models | **Use** |
 | Muse Spark video | API [11] | — | Reads the mp4 and lists continuity and physics anomalies | Credits; mp4 only | **Observations** |
 | ReStraV | Internò et al., NeurIPS 2025 [73] | Apache-2.0, **no weights** | Real videos trace straighter paths through DINOv2 ViT-S/14 feature space. 21 curvature and distance features from 24 frames feed an MLP. 97% accuracy on VidProM generators seen in training | You train it: VidProM fakes (CC BY-NC 4.0) [78] plus real clips | Stretch |
@@ -185,12 +185,12 @@ For probe training, stream a few thousand images from Community Forensics (CC BY
 | STALL | Ben Hayun et al., CVPR 2026 [74] | Project page | **Training-free**: scores videos against the statistics of real videos. Its ComGenVid benchmark includes Sora and Veo-3 | Statistics from real videos | Stretch |
 | V-PVP / V-JEPA 2 | [77] / [36] | Anonymous / MIT | Patch-velocity readout on frozen video backbones | Training | Future |
 
-Caveat: detectors learn to look for generators' *visible* watermarks. When RobustSora removed those overlays, accuracy on Sora 2 videos dropped by 11–14 points [76].
+Caveat: detectors learn to look for generators' _visible_ watermarks. When RobustSora removed those overlays, accuracy on Sora 2 videos dropped by 11–14 points [76].
 
 **Audio (speech).** Speech DF Arena [91] is the place to compare models. It is a leaderboard of open and commercial detectors scored on 14 test sets, with a toolkit to reproduce the numbers. Scores are EER: the error rate at the threshold where false alarms and misses are equal, so lower is better.
 
 | Method | Paper | Code (license) | How it works | Needs | MVP |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | **Wav2Vec2-AASIST** | Tak et al., Odyssey 2022 [88] | TakHemlata/SSL_Anti-spoofing (MIT), with pretrained LA and DF checkpoints | Meta's XLS-R 300M speech model as the front end, plus an AASIST graph-attention classifier. Trained on ASVspoof 2019 LA with data augmentation. 2.85% EER on ASVspoof 2021 DF, but 11.19% on In-the-Wild and 18.02% averaged over the Arena's 14 sets [88][91] | GPU, about 2 GB | **Use (day one)** |
 | AudioSeal | San Roman et al., ICML 2024 [28] | MIT (code and weights) | Watermark detector that outputs a probability for every sample (1/16,000 s) | CPU or small GPU | **Use** (watermark only) |
 | XLSR+SLS | Zhang et al., ACM MM 2024 [94] | SLSforASVspoof-2021-DF (**no license**), pretrained checkpoint | Weighs features from several XLS-R layers before a small classifier. Best open model on the Arena: 13.84% average EER, 7.45% on In-the-Wild [91] | GPU | Optional plug-in, **not bundled** |
@@ -210,7 +210,7 @@ Two caveats:
 ## 6. Prior art: what to reuse and how to stand out
 
 | Project | What it is | What to take from it |
-|---|---|---|
+| --- | --- | --- |
 | DeepFake-O-Meter v2.0 (University at Buffalo) [82] | Web platform running 6 image, 7 video and 5 audio detectors, including NPR, CLIP-ViT, FTCN and LSDA | Ideas only: which detectors to offer and the job queue. The paper calls it open source, but I found no public v2 repo (**unverified**) |
 | TrueMedia.org [83] | Nonprofit platform built against political deepfakes. Published its app and detector code under **MIT** in Jan–Feb 2025 | UI and architecture patterns. The **weights are not public**; as of 2025-02-03 they were available by email request only |
 | Fast-DetectGPT demo / API [42] | Text-only detector | Reference behaviour for the text path |
@@ -286,16 +286,23 @@ flowchart LR
 
 ```json
 {
-  "id": "img.commfor", "detector": "community-forensics-vits-384",
-  "version": "OwensLab/commfor-model-384@<sha>", "modality": "image",
-  "signal": "learned",            // provenance | watermark | learned | zero_shot | vlm
-  "status": "ok",                 // ok | skipped | error | out_of_domain
-  "raw_score": 3.12, "p_ai": 0.93, // calibrated; null for provenance/watermark
-  "points_to": "ai",              // ai | real | none
+  "id": "img.commfor",
+  "detector": "community-forensics-vits-384",
+  "version": "OwensLab/commfor-model-384@<sha>",
+  "modality": "image",
+  "signal": "learned", // provenance | watermark | learned | zero_shot | vlm
+  "status": "ok", // ok | skipped | error | out_of_domain
+  "raw_score": 3.12,
+  "p_ai": 0.93, // calibrated; null for provenance/watermark
+  "points_to": "ai", // ai | real | none
   "weight": 0.5,
-  "details": {"crops": 4, "max_crop_p_ai": 0.97},
-  "artifacts": [{"kind": "heatmap", "uri": "/r/9f2c/commfor.png"}],
-  "calibration": {"set": "heldout-image-v1", "auroc": null, "tpr_at_1pct_fpr": null},
+  "details": { "crops": 4, "max_crop_p_ai": 0.97 },
+  "artifacts": [{ "kind": "heatmap", "uri": "/r/9f2c/commfor.png" }],
+  "calibration": {
+    "set": "heldout-image-v1",
+    "auroc": null,
+    "tpr_at_1pct_fpr": null
+  },
   "latency_ms": 41
 }
 ```
@@ -312,14 +319,26 @@ The `details` field depends on the signal type:
 
 ```json
 {
-  "request_id": "9f2c…", "modality": "image", "sha256": "…",
-  "verdict": "likely_ai",         // declared_ai | declared_capture | likely_ai | inconclusive | no_ai_signal
-  "p_ai": 0.89, "bands": {"no_ai_signal_below": 0.20, "likely_ai_above": 0.80},
-  "decided_by": "fusion",         // provenance | watermark | fusion
-  "evidence": [ /* evidence items */ ],
-  "fusion": {"policy": "fusion.yaml@v0.3", "weights": {"img.commfor": 0.5, "img.clip": 0.3, "img.probe": 0.2}},
-  "report": {"model": "muse-spark-1.3", "summary": "…", "reasons": [{"evidence_id": "img.commfor", "text": "…"}],
-             "caveats": ["No C2PA manifest; missing metadata is not evidence of authenticity."]},
+  "request_id": "9f2c…",
+  "modality": "image",
+  "sha256": "…",
+  "verdict": "likely_ai", // declared_ai | declared_capture | likely_ai | inconclusive | no_ai_signal
+  "p_ai": 0.89,
+  "bands": { "no_ai_signal_below": 0.2, "likely_ai_above": 0.8 },
+  "decided_by": "fusion", // provenance | watermark | fusion
+  "evidence": [/* evidence items */],
+  "fusion": {
+    "policy": "fusion.yaml@v0.3",
+    "weights": { "img.commfor": 0.5, "img.clip": 0.3, "img.probe": 0.2 }
+  },
+  "report": {
+    "model": "muse-spark-1.3",
+    "summary": "…",
+    "reasons": [{ "evidence_id": "img.commfor", "text": "…" }],
+    "caveats": [
+      "No C2PA manifest; missing metadata is not evidence of authenticity."
+    ]
+  },
   "generated_at": "2026-11-03T18:22:10Z"
 }
 ```
@@ -347,7 +366,7 @@ resp = client.chat.completions.create(
 **How the video path reuses the image path:**
 
 1. Decode the video with PyAV and sample 16 frames evenly, skipping the first and last 0.5 s.
-2. Call the *same* image evidence functions on each frame: the learned detectors and the frame-mode watermark check.
+2. Call the _same_ image evidence functions on each frame: the learned detectors and the frame-mode watermark check.
 3. Aggregate the frame scores with the median and the mean of the top 25%. Keep the per-frame scores to draw a timeline, and show the highest-scoring frames as evidence.
 4. Add the video-only signals:
    - Video Seal in video mode.
@@ -370,7 +389,7 @@ resp = client.chat.completions.create(
 ## 8. Tech stack
 
 | Layer | Choice | Why |
-|---|---|---|
+| --- | --- | --- |
 | API | Python 3.11, FastAPI, Pydantic v2 | The detectors are PyTorch, and the Pydantic models double as the JSON schema |
 | UI | Gradio Blocks mounted in FastAPI | Image, video and text inputs out of the box, in one process: the quickest polished demo |
 | ML | PyTorch, `transformers`, torch.hub, `videoseal`, `audioseal`, scikit-learn | Matches the reference code. scikit-learn handles calibration and the probe |
@@ -382,17 +401,17 @@ resp = client.chat.completions.create(
 
 **VRAM budget** (my estimates unless cited):
 
-| Component | VRAM |
-|---|---|
-| Llama-3.1-8B pair in BF16 | 32–36 GB |
-| Llama 3B pair (alternative) | 13–15 GB |
-| Community Forensics | under 1 GB [60] |
-| CLIP | about 2 GB |
-| DINOv3-L or PE-L | 1–2 GB |
-| DINOv2-S | under 1 GB |
-| Wav2Vec2-AASIST (XLS-R 300M) | about 2 GB |
-| AudioSeal | under 1 GB |
-| Muse Glimmer, quantized (stretch) | 24–32 GB [15] |
+| Component                         | VRAM            |
+| --------------------------------- | --------------- |
+| Llama-3.1-8B pair in BF16         | 32–36 GB        |
+| Llama 3B pair (alternative)       | 13–15 GB        |
+| Community Forensics               | under 1 GB [60] |
+| CLIP                              | about 2 GB      |
+| DINOv3-L or PE-L                  | 1–2 GB          |
+| DINOv2-S                          | under 1 GB      |
+| Wav2Vec2-AASIST (XLS-R 300M)      | about 2 GB      |
+| AudioSeal                         | under 1 GB      |
+| Muse Glimmer, quantized (stretch) | 24–32 GB [15]   |
 
 **The MVP fits on one 48 GB GPU.** Each Muse Spark report should cost about a cent. That is an estimate, because the docs don't say how many tokens an image counts as. Transcribing a one-minute clip costs about $0.003 [90].
 
@@ -434,7 +453,7 @@ Today is Tue Oct 27. Submissions are due Wed Nov 4 at 9 PM ET.
 - Scraping social-media URLs.
 
 | Day | Goal | Done when |
-|---|---|---|
+| --- | --- | --- |
 | 1 Tue 10/27 | Send the §2 questions. Set up the repo, Modal, the API key, the schemas and a skeleton app. Check whether Muse Image output carries metadata or a watermark. Install the audio detector early, because research repos often pin old library versions | Hello-world is deployed |
 | 2 Wed 10/28 | Image path: C2PA/IPTC, Video Seal, Community Forensics, CLIP | An image returns evidence JSON |
 | 3 Thu 10/29 | Text path (B): Llama pair, both scores, token colouring. Audio path (A): ffmpeg conversion, C2PA, AudioSeal, Wav2Vec2-AASIST windows, Muse Voice Transcribe. Download evaluation subsets, and generate 150 Muse Image fakes and 50 MMS-TTS clips | Text and audio return evidence JSON |
@@ -467,7 +486,7 @@ Today is Tue Oct 27. Submissions are due Wed Nov 4 at 9 PM ET.
 ## 10. Evaluation
 
 | Modality | Held-out set (license) | Size |
-|---|---|---|
+| --- | --- | --- |
 | Text | RAID (MIT) [47], stratified across 4 or more domains, plus its paraphrase-attack split and fresh Muse Spark generations paired with matched human text | 300 human + 300 AI + 100 attacked |
 | Image | A Community Forensics-Eval stream (CC BY-NC-SA 4.0) [60], plus Muse Image fakes paired with photos you own or CC-BY photos. All images get the same JPEG quality and size [63] | 500+500, plus 150+150 |
 | Video | VidProM (CC BY-NC 4.0) [78] or GenVideo-100K (license **unverified**) [71], plus real clips you are licensed to use | 100+100 |
@@ -505,7 +524,7 @@ Today is Tue Oct 27. Submissions are due Wed Nov 4 at 9 PM ET.
 ## 11. Risks, limitations and ethics
 
 - **False positives.** Never present a verdict as proof. Show the measured FPR next to it, and never pitch the tool for disciplining students. The Ghostbuster authors explicitly discourage that use [45].
-- **Bias.** Text detectors penalise non-native English writers [49] and break down on other languages [53]. Detect the language and mark non-English text *out_of_domain*. Audio detectors also lose accuracy outside their training conditions, such as noisy rooms, phone lines and real-world clips [91][92].
+- **Bias.** Text detectors penalise non-native English writers [49] and break down on other languages [53]. Detect the language and mark non-English text _out_of_domain_. Audio detectors also lose accuracy outside their training conditions, such as noisy rooms, phone lines and real-world clips [91][92].
 - **Evasion.** Paraphrasing defeats text detectors [50][51]. Watermarks can be removed or forged [27][76]. A missing C2PA manifest proves nothing. New generators break trained detectors [75]. Re-evaluate continuously; Muse Image makes that cheap.
 - **Oracle abuse.** A public score lets attackers tune their content until it passes. Rate-limit the demo.
 - **Licenses.**
@@ -526,7 +545,7 @@ Today is Tue Oct 27. Submissions are due Wed Nov 4 at 9 PM ET.
 
 ## 12. Sources
 
-*All accessed 2026-10-27.*
+_All accessed 2026-10-27._
 
 1. Cerebral Valley & Meta, "Meta Global AI Developer Hackathon". Event page, including "Hackathon Terms & Conditions ('Official Rules') and Event Waiver", dated 2026-10-25. https://cerebralvalley.ai/e/meta-ai-developer-hackathon (Markdown version: https://cerebralvalley.ai/e/meta-ai-developer-hackathon.md)
 2. Meta, "Win $1M: Meta Global AI Developer Hackathon". https://dev.meta.ai/events/global-hackathon
@@ -576,10 +595,10 @@ Today is Tue Oct 27. Submissions are due Wed Nov 4 at 9 PM ET.
 46. X. Hu, P.-Y. Chen, T.-Y. Ho, "RADAR", NeurIPS 2023, arXiv:2307.03838. https://huggingface.co/TrustSafeAI/RADAR-Vicuna-7B
 47. L. Dugan et al., "RAID", ACL 2024, arXiv:2405.07940. Code and data (MIT): https://github.com/liamdugan/raid
 48. OpenAI, "New AI classifier for indicating AI-written text", 2023-01-31, with a note added 2023-07-20. https://openai.com/index/new-ai-classifier-for-indicating-ai-written-text/ The page returned 403 to my fetcher; the withdrawal wording is confirmed by news coverage.
-49. W. Liang et al., "GPT detectors are biased against non-native English writers", *Patterns* 4(7), 2023, doi:10.1016/j.patter.2023.100779. arXiv:2304.02819. https://arxiv.org/abs/2304.02819
+49. W. Liang et al., "GPT detectors are biased against non-native English writers", _Patterns_ 4(7), 2023, doi:10.1016/j.patter.2023.100779. arXiv:2304.02819. https://arxiv.org/abs/2304.02819
 50. K. Krishna et al., "Paraphrasing evades detectors of AI-generated text, but retrieval is an effective defense", NeurIPS 2023, arXiv:2303.13408. https://arxiv.org/abs/2303.13408
 51. V. S. Sadasivan et al., "Can AI-Generated Text be Reliably Detected?", TMLR, arXiv:2303.11156. https://arxiv.org/abs/2303.11156
-52. S. Dathathri et al. (Google DeepMind), "Scalable watermarking for identifying large language model outputs" (SynthID-Text), *Nature* 634:818–823, October 2024, doi:10.1038/s41586-024-08025-4. https://github.com/google-deepmind/synthid-text
+52. S. Dathathri et al. (Google DeepMind), "Scalable watermarking for identifying large language model outputs" (SynthID-Text), _Nature_ 634:818–823, October 2024, doi:10.1038/s41586-024-08025-4. https://github.com/google-deepmind/synthid-text
 53. M. Ozaman, "Unchecked or Falsely Accused? Evaluating AI-Generated Text Detectors on Kazakh", arXiv:2610.15870, 2026-10-11. https://arxiv.org/abs/2610.15870
 54. S.-Y. Wang et al., "CNN-generated images are surprisingly easy to spot… for now", CVPR 2020, arXiv:1912.11035. Code (CC BY-NC-SA 4.0): https://github.com/PeterWang512/CNNDetection
 55. U. Ojha, Y. Li, Y. J. Lee, "Towards Universal Fake Image Detectors that Generalize Across Generative Models", CVPR 2023, arXiv:2302.10174. Code (MIT): https://github.com/WisconsinAIVision/UniversalFakeDetect

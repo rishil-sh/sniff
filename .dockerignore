@@ -34,3 +34,7 @@ local.db-*
 
 apps/detector/data
 apps/detector/.venv
+apps/detector/samples
+apps/detector/docs
+apps/detector/reports
+apps/detector/research_notes

@@ -5,7 +5,7 @@ One file for each kind of result the detector can give. Drop any of them into th
 The table shows what the app returned for each file on 2026-11-04, with Muse off.
 
 | File | Verdict | p(AI) | Message the user sees |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `audio/01_ai_elevenlabs_v3.mp3` | likely_ai | 0.94 | 🤖 AI-generated voice |
 | `audio/02_ai_elevenlabs_v4_acting.mp3` | likely_ai | 1.00 | 🤖 AI-generated voice |
 | `audio/03_ai_openai_borderline.wav` | inconclusive | 0.65 | 🤔 Can't say for sure. Best guess: AI |
@@ -28,6 +28,7 @@ The table shows what the app returned for each file on 2026-11-04, with Muse off
 | `video/01_test_pattern.mp4` | inconclusive | n/a | ⚠️ Couldn't check this |
 
 ## What each one shows
+
 - **image 01–02:** real photos. Expect no AI signal.
 - **image 03–04:** AI images that carry signed Content Credentials (OpenAI, Google), so they are declared AI.
 - **image 05:** image 04 re-saved, which strips the label. The pixel detector still catches it.
@@ -40,6 +41,7 @@ The table shows what the app returned for each file on 2026-11-04, with Muse off
 - **text 04–05 and video 01:** out of scope (too short, not English, video not supported yet).
 
 ## Sources
+
 - image 01: "Camponotus flavomarginatus ant" (Wikimedia Commons, CC BY-SA)
 - image 02–07: `zr-zhang/MLLM-Generated-Image-Detection-Dataset` on Hugging Face
 - audio: `data/eval_voices` (LibriSpeech, Common Voice, ElevenLabs and OpenAI clips)

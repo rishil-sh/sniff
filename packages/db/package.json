@@ -23,7 +23,6 @@
   "devDependencies": {
     "@sniff/config": "workspace:*",
     "drizzle-kit": "1.0.0-rc.5",
-    "typescript": "catalog:",
-    "varlock": "catalog:"
+    "typescript": "catalog:"
   }
 }

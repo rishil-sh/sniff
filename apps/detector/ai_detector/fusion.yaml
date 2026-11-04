@@ -15,9 +15,9 @@ max_disagreement: 0.8
 chance_band: 0.15
 weights:
   img.head: 1
-  img.commfor: 0  # flags zoomed screenshots of real photos (29/900 at 0.90); shown, does not vote
-  img.clip: 0  # AUROC 0.56 on eval_v2 (0.66 on eval): near chance, shown, does not vote
-  img.spai: 0  # AUROC 0.69 and got weight 0 in both held-out folds: shown, does not vote
+  img.commfor: 0 # flags zoomed screenshots of real photos (29/900 at 0.90); shown, does not vote
+  img.clip: 0 # AUROC 0.56 on eval_v2 (0.66 on eval): near chance, shown, does not vote
+  img.spai: 0 # AUROC 0.69 and got weight 0 in both held-out folds: shown, does not vote
   # Text weights only apply when the text stacker below can't run (a classifier failed or its version changed).
   # The zero-shot Llama pair is shown but does not vote: the 3B pair flagged 0/5 modern essays (2026-11-03).
   txt.binoculars: 0
@@ -33,16 +33,65 @@ weights:
 # Per-detector Platt fits from scripts/eval_images.py. Empty = raw sigmoids.
 # Fit on all of eval_v2; held-out fold fits (tune_fusion.py) land within a=0.40-0.45, b=2.3-2.7.
 platt:
-  img.commfor: {a: 0.424375, b: 2.54619, set: eval_v2, auroc: 0.8981, tpr_at_1pct_fpr: 0.2142}
-  img.clip: {a: 0.144587, b: -0.197498, set: eval_v2, auroc: 0.5574, tpr_at_1pct_fpr: 0.0042}
+  img.commfor:
+    {
+      a: 0.424375,
+      b: 2.54619,
+      set: eval_v2,
+      auroc: 0.8981,
+      tpr_at_1pct_fpr: 0.2142,
+    }
+  img.clip:
+    {
+      a: 0.144587,
+      b: -0.197498,
+      set: eval_v2,
+      auroc: 0.5574,
+      tpr_at_1pct_fpr: 0.0042,
+    }
   # spai not rescored on eval_v2 (--skip-spai); fit is from data/eval
-  img.spai: {a: 0.0295695, b: 0.515644, set: eval, auroc: 0.6917, tpr_at_1pct_fpr: 0.0563}
+  img.spai:
+    {
+      a: 0.0295695,
+      b: 0.515644,
+      set: eval,
+      auroc: 0.6917,
+      tpr_at_1pct_fpr: 0.0563,
+    }
   # Llama-3.2-3B pair on 73 unattacked RAID abstracts, in-sample. Refit when you change the pair.
-  txt.binoculars: {a: -20.9382, b: 16.7992, set: raid-abstracts-73@Llama-3.2-3B, auroc: 1.0, tpr_at_1pct_fpr: 1.0}
-  txt.fastdetect: {a: 1.3822, b: -4.16124, set: raid-abstracts-73@Llama-3.2-3B, auroc: 1.0, tpr_at_1pct_fpr: 1.0}
+  txt.binoculars:
+    {
+      a: -20.9382,
+      b: 16.7992,
+      set: raid-abstracts-73@Llama-3.2-3B,
+      auroc: 1.0,
+      tpr_at_1pct_fpr: 1.0,
+    }
+  txt.fastdetect:
+    {
+      a: 1.3822,
+      b: -4.16124,
+      set: raid-abstracts-73@Llama-3.2-3B,
+      auroc: 1.0,
+      tpr_at_1pct_fpr: 1.0,
+    }
   # data/eval_text (scripts/fetch_text_eval.py), fit on 1,027 rows, measured on the other 1,056.
-  txt.fakespot: {a: 0.79406, b: -4.444005, set: eval_text-fit1027, auroc: 0.9933, tpr_at_1pct_fpr: 0.906}
-  txt.desklib: {a: 0.715916, b: -2.617667, set: eval_text-fit1027, auroc: 0.99, tpr_at_1pct_fpr: 0.9312}
+  txt.fakespot:
+    {
+      a: 0.79406,
+      b: -4.444005,
+      set: eval_text-fit1027,
+      auroc: 0.9933,
+      tpr_at_1pct_fpr: 0.906,
+    }
+  txt.desklib:
+    {
+      a: 0.715916,
+      b: -2.617667,
+      set: eval_text-fit1027,
+      auroc: 0.99,
+      tpr_at_1pct_fpr: 0.9312,
+    }
 # Logistic stackers over raw detector scores; they replace the weighted mean and disagreement veto for a modality.
 stackers:
   # Fit 2026-11-03 on the eval_text fit split. On the held-out 620 human / 436 AI texts, vs the weighted rule:
@@ -52,11 +101,15 @@ stackers:
   #   right when it says AI: 96.5%; right when it says human: 97.8%; inconclusive: 2.8% of texts (24/30 human)
   text:
     intercept: -3.422161
-    coef: {txt.fakespot: 0.360369, txt.desklib: 0.46532}
-    versions: {txt.fakespot: fakespot-ai/roberta-base-ai-text-detection-v1, txt.desklib: desklib/ai-text-detector-v1.01}
+    coef: { txt.fakespot: 0.360369, txt.desklib: 0.46532 }
+    versions:
+      {
+        txt.fakespot: fakespot-ai/roberta-base-ai-text-detection-v1,
+        txt.desklib: desklib/ai-text-detector-v1.01,
+      }
     # no_ai_signal_below raised by hand from the fitted 0.0323 (2026-11-03): below 0.25, 97.8% of held-out texts
     # were human on both splits, so the WhatsApp reply says "Written by a human" instead of "can't say for sure".
-    bands: {no_ai_signal_below: 0.25, likely_ai_above: 0.6155}
+    bands: { no_ai_signal_below: 0.25, likely_ai_above: 0.6155 }
     target_fpr: 0.01
     set: eval_text-fit1027
   # Learned 2026-11-04 by a leave-one-vendor-out logistic stacker over the three speech detectors on 610
@@ -70,8 +123,9 @@ stackers:
   # Gemini likely_ai 51 -> 78/80, OpenAI tts-1 0 -> 3/6, ElevenLabs 119/119.
   audio:
     intercept: 0.0
-    coef: {aud.w2vbert: 1.0}
-    versions: {aud.w2vbert: "facebook/w2v-bert-2.0@da985ba+probe:en-L18-C0.01-cal1"}
-    bands: {no_ai_signal_below: 0.4193, likely_ai_above: 0.8954}
+    coef: { aud.w2vbert: 1.0 }
+    versions:
+      { aud.w2vbert: "facebook/w2v-bert-2.0@da985ba+probe:en-L18-C0.01-cal1" }
+    bands: { no_ai_signal_below: 0.4193, likely_ai_above: 0.8954 }
     target_fpr: 0.01
     set: probe_train-610-logo

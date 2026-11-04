@@ -186,43 +186,12 @@ const downloadMedia = async (mediaId: string): Promise<Uint8Array> => {
   throw new Error(`WhatsApp media ${mediaId}: too many redirects.`);
 };
 
-/**
- * WhatsApp voice notes are Ogg/Opus, which the detector's router doesn't accept (wav/mp3/m4a/flac). Transcode to
- * WAV here so apps/detector stays an exact copy of ai-detection-suite. Needs ffmpeg on PATH (or FFMPEG).
- */
-const oggToWav = async (bytes: Uint8Array): Promise<Uint8Array> => {
-  const ffmpeg = Bun.spawn(
-    [
-      process.env.FFMPEG ?? "ffmpeg",
-      "-loglevel",
-      "error",
-      "-i",
-      "pipe:0",
-      "-f",
-      "wav",
-      "pipe:1",
-    ],
-    {
-      stderr: "pipe",
-      stdin: bytes,
-      stdout: "pipe",
-    }
-  );
-  const [wav, stderr, code] = await Promise.all([
-    new Response(ffmpeg.stdout).arrayBuffer(),
-    new Response(ffmpeg.stderr).text(),
-    ffmpeg.exited,
-  ]);
-  if (code !== 0) {
-    throw new Error(`ffmpeg exited ${code}: ${stderr}`);
-  }
-  return new Uint8Array(wav);
-};
-
 const EXTENSIONS = new Map([
   ["audio/aac", "m4a"],
   ["audio/mp4", "m4a"],
   ["audio/mpeg", "mp3"],
+  // WhatsApp voice notes; the detector decodes Ogg/Opus with its bundled ffmpeg.
+  ["audio/ogg", "ogg"],
   ["audio/wav", "wav"],
   ["image/jpeg", "jpg"],
   ["image/png", "png"],
@@ -238,13 +207,6 @@ const fileFor = async (message: InboundMessage) => {
   }
   const mimeType = media.mime_type?.split(";")[0]?.trim() ?? "";
   const bytes = await downloadMedia(media.id);
-  if (mimeType === "audio/ogg") {
-    return {
-      bytes: await oggToWav(bytes),
-      filename: "voice-note.wav",
-      mimeType: "audio/wav",
-    };
-  }
   const filename =
     message.document?.filename ??
     `${message.type}.${EXTENSIONS.get(mimeType) ?? "bin"}`;

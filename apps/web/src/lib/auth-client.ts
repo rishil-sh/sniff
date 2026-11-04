@@ -1,5 +1,7 @@
 import { createAuthClient } from "better-auth/react";
 
+import { serverUrl } from "./server-url";
+
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_SERVER_URL!,
+  baseURL: serverUrl(),
 });

@@ -66,6 +66,9 @@
     "destroy": {
       "cache": false,
       "interactive": true
+    },
+    "test": {
+      "cache": false
     }
   },
   "globalEnv": [
@@ -76,8 +79,8 @@
     "CORS_ORIGIN",
     "DATABASE_URL",
     "DETECTOR_URL",
-    "FFMPEG",
     "MASTRA_DATABASE_URL",
+    "MIGRATIONS_DIR",
     "MODEL_API_KEY",
     "MUSE_MODEL",
     "NEXT_PUBLIC_SERVER_URL",
@@ -89,8 +92,7 @@
     "WHATSAPP_ACCESS_TOKEN",
     "WHATSAPP_APP_SECRET",
     "WHATSAPP_PHONE_NUMBER_ID",
-    "WHATSAPP_VERIFY_TOKEN",
-    "_VARLOCK_ENV_KEY"
+    "WHATSAPP_VERIFY_TOKEN"
   ],
   "globalDependencies": [
     ".env*",

@@ -6,29 +6,29 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.32",
-    "pydantic>=2.9",
-    "python-multipart>=0.0.9",
-    "python-dotenv>=1.0",
-    "openai>=1.55",
-    "pyyaml>=6.0",
-    "httpx>=0.27",
-    "c2pa-python==0.38.2",
-    "pillow>=10.0",
-    "defusedxml>=0.7",
-    "torch>=2.4",
-    "torchvision>=0.19",
-    "timm>=0.9.16",
-    "huggingface-hub>=0.23",
-    "safetensors>=0.4",
-    "open-clip-torch>=2.24",
-    "invisible-watermark>=0.2.0",
-    "transformers>=4.45",
-    "einops>=0.8",
-    "torchaudio>=2.11.1",
-    "audioseal>=0.1.4",
-    "imageio-ffmpeg>=0.5",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "python-multipart>=0.0.9",
+  "python-dotenv>=1.0",
+  "openai>=1.55",
+  "pyyaml>=6.0",
+  "httpx>=0.27",
+  "c2pa-python==0.38.1",  # 0.38.2 published macOS wheels only
+  "pillow>=10.0",
+  "defusedxml>=0.7",
+  "torch>=2.4",
+  "torchvision>=0.19",
+  "timm>=0.9.16",
+  "huggingface-hub>=0.23",
+  "safetensors>=0.4",
+  "open-clip-torch>=2.24",
+  "invisible-watermark>=0.2.0",
+  "transformers>=4.45",
+  "einops>=0.8",
+  "torchaudio>=2.11.1",
+  "audioseal>=0.1.4",
+  "imageio-ffmpeg>=0.5",
 ]
 
 [project.optional-dependencies]
@@ -37,6 +37,7 @@ deploy = ["modal>=0.73"]
 
 [project.scripts]
 ai-detector = "ai_detector.app:main"
+ai-detector-download = "ai_detector.download_models:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -47,6 +48,18 @@ packages = ["ai_detector"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "ai_detector/fusion.yaml" = "ai_detector/fusion.yaml"
+
+# Linux (Docker, CI) gets CPU-only PyTorch: the default Linux wheels bundle CUDA and add several GB.
+# On a Linux GPU box, delete these sources to get CUDA wheels. macOS and Windows are unaffected.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

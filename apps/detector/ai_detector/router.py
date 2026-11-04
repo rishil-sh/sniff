@@ -38,7 +38,7 @@ _CONFUSABLE_CHARS = frozenset(_LOOKALIKES)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".tif", ".tiff"}
 VIDEO_EXTS = {".mp4"}
-AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".flac"}
+AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".opus"}  # Ogg/Opus: WhatsApp voice notes
 
 
 @dataclass
@@ -125,6 +125,8 @@ def sniff(data: bytes, filename: str | None) -> tuple[Modality, str | None]:
             return "audio", "audio/wav"
     if data.startswith(b"fLaC"):
         return "audio", "audio/flac"
+    if data.startswith(b"OggS"):
+        return "audio", "audio/ogg"
     if data.startswith(b"ID3") or (
         len(data) >= 2 and data[0] == 0xFF and data[1] in (0xFB, 0xF3, 0xF2, 0xFA)
     ):
@@ -147,6 +149,8 @@ def sniff(data: bytes, filename: str | None) -> tuple[Modality, str | None]:
             ".mp3": "audio/mpeg",
             ".m4a": "audio/mp4",
             ".flac": "audio/flac",
+            ".ogg": "audio/ogg",
+            ".opus": "audio/ogg",
         }[ext]
         return "audio", mime
     return "unknown", None

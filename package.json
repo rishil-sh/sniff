@@ -1,32 +1,30 @@
 {
   "name": "sniff",
   "private": true,
+  "description": "Is this AI? Check images, voice notes and text on the web or over WhatsApp.",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo run dev",
+    "auth:generate": "cd apps/server && pnpm run auth:generate",
+    "bootstrap": "sh scripts/bootstrap.sh",
     "build": "turbo run build",
+    "check": "ultracite check",
     "check-types": "turbo run check-types",
-    "dev:web": "turbo run dev:bare -F web --",
-    "dev:server": "turbo run dev -F server --",
-    "db:push": "turbo run db:push -F @sniff/db --",
-    "db:studio": "turbo run db:studio -F @sniff/db --",
     "db:generate": "turbo run db:generate -F @sniff/db --",
     "db:migrate": "turbo run db:migrate -F @sniff/db --",
+    "db:push": "turbo run db:push -F @sniff/db --",
+    "db:studio": "turbo run db:studio -F @sniff/db --",
     "deploy": "turbo run deploy -F @sniff/infra --",
     "destroy": "turbo run destroy -F @sniff/infra --",
-    "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
-    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "auth:generate": "cd apps/server && pnpm run auth:generate",
-    "check": "ultracite check",
-    "fix": "ultracite fix"
+    "dev": "turbo run dev",
+    "dev:server": "turbo run dev -F server --",
+    "dev:web": "turbo run dev -F web --",
+    "fix": "ultracite fix",
+    "models": "cd apps/detector && uv run ai-detector-download",
+    "test": "turbo run test"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -41,8 +39,7 @@
     "oxlint": "^1.86.0",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
-    "ultracite": "8.0.0",
-    "varlock": "catalog:"
+    "ultracite": "8.0.0"
   },
   "packageManager": "pnpm@12.3.4"
 }

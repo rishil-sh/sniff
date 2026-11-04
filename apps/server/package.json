@@ -5,11 +5,11 @@
   "scripts": {
     "build": "tsc -b ../../packages/api && tsdown",
     "check-types": "tsc -b ../../packages/api && tsc --noEmit",
-    "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile server",
+    "compile": "bun build ./src/index.ts --compile --bytecode --format=esm --minify --no-compile-autoload-dotenv --outfile server",
     "dev": "bun run --hot src/index.ts",
     "start": "bun run dist/index.mjs",
-    "env:generate": "varlock codegen",
-    "auth:generate": "varlock run -- pnpm dlx auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes"
+    "auth:generate": "bunx auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes",
+    "test": "bun test"
   },
   "dependencies": {
     "@mastra/core": "^1.81.0",
@@ -25,7 +25,6 @@
     "evlog": "catalog:",
     "hono": "^4.13.7",
     "libsql": "catalog:",
-    "varlock": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

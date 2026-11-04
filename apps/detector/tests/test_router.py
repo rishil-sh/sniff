@@ -95,3 +95,21 @@ def test_emoji_joiners_are_not_counted_as_tampering():
 
     clean, changes = normalize_text("Our team 👨‍💻 shipped it 🏳️‍🌈 today.")
     assert changes["hidden"] == 0 and "👨‍💻" in clean
+
+
+def test_ogg_opus_voice_note_routes_and_decodes():
+    # WhatsApp voice notes are Ogg/Opus; build one with the bundled ffmpeg and check it reaches the audio path.
+    import subprocess
+
+    from ai_detector.detectors.audio import SR, decode
+    from ai_detector.router import ffmpeg_exe
+
+    ogg = subprocess.run(
+        [ffmpeg_exe(), "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=2", "-c:a", "libopus",
+         "-f", "ogg", "pipe:1"],
+        capture_output=True, check=True, timeout=60,
+    ).stdout
+    assert sniff(ogg, None) == ("audio", "audio/ogg")
+    assert sniff(b"", "note.opus") == ("audio", "audio/ogg")
+    samples = decode(ogg, ".ogg")
+    assert abs(len(samples) / SR - 2.0) < 0.1
